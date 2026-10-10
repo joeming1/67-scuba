@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FixFlow — Student ticket status</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f3f6f8;color:#17212b;font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}header{padding:20px max(20px,calc((100vw - 760px)/2));background:#102b3f;color:white}header strong{font-size:20px}main{max-width:760px;margin:28px auto;padding:0 18px}.card{background:white;border:1px solid #dce4e9;border-radius:14px;padding:22px;margin-bottom:14px}.muted{color:#6c7c89;line-height:1.5}.pill{display:inline-block;padding:6px 11px;border-radius:20px;background:#e6f2ff;color:#236196;font-size:12px;font-weight:700;text-transform:capitalize}.status-closed{background:#e5f6ee;color:#147550}.status-follow_up{background:#fff0e2;color:#9a510c}.status-in_progress{background:#fff3db;color:#926112}.status-verification_pending{background:#f1ebff;color:#6541a0}.timeline{border-top:1px solid #edf1f3;padding-top:12px}.event{padding:9px 0;border-bottom:1px solid #f0f3f5;color:#415562;line-height:1.45}.event small{display:block;color:#82919b;margin-top:3px}.proof{max-width:100%;max-height:360px;border-radius:10px;margin-top:12px}.error{color:#a13232}
+  </style>
+</head>
+<body><header><strong>FixFlow</strong><div>Student ticket updates</div></header><main><div class="card" id="ticket"><p class="muted">Loading your ticket…</p></div></main>
+<script>
+  const token = location.pathname.split('/').filter(Boolean).at(-1);
+  const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  async function refresh() {
+    const response = await fetch('/api/student/tickets/' + encodeURIComponent(token), {cache:'no-store'});
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Could not load this ticket.');
+    const t = data.ticket;
+    const events = t.timeline.map((event) => '<div class="event">' + escapeHtml(event.message) + '<small>' + new Date(event.created_at).toLocaleString() + '</small></div>').join('');
+    const photo = t.completion_verification?.photo_url ? '<img class="proof" src="' + escapeHtml(t.completion_verification.photo_url) + '" alt="Technician completion photo">' : '';
+    const schedule = t.scheduled_at ? '<p class="muted"><strong>Scheduled visit:</strong> ' + escapeHtml(new Date(t.scheduled_at).toLocaleString()) + '</p>' : '';
+    document.getElementById('ticket').innerHTML = '<div style="display:flex;justify-content:space-between;gap:15px;align-items:center"><div><div class="muted">' + escapeHtml(t.id) + '</div><h1>' + escapeHtml(t.summary) + '</h1></div><span class="pill status-' + escapeHtml(t.status) + '">' + escapeHtml(t.status.replaceAll('_',' ')) + '</span></div>'
+      + '<p class="muted">Location: ' + escapeHtml(t.location) + '</p>' + schedule + '<p class="muted">' + (t.status === 'closed' ? 'Your reported issue is complete.' : 'This page updates automatically as the technician works on your issue.') + '</p>'
+      + (photo ? '<h3>Completion evidence</h3>' + photo : '') + '<div class="timeline"><h3>Updates</h3>' + events + '</div>';
+  }
+  refresh().catch((error) => document.getElementById('ticket').innerHTML = '<p class="error">' + escapeHtml(error.message) + '</p>');
+  setInterval(() => refresh().catch(() => {}), 2500);
+</script></body></html>

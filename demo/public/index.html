@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FixFlow — Student maintenance help</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f3f6f8;color:#17212b;font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}header{background:#102b3f;color:white;padding:22px max(20px,calc((100vw - 760px)/2))}header strong{font-size:22px}header p{margin:5px 0 0;color:#c5d3dc;font-size:13px}main{max-width:760px;margin:34px auto;padding:0 18px}.card{background:white;border:1px solid #dce4e9;border-radius:16px;padding:24px;margin-bottom:16px;box-shadow:0 5px 20px #102b3f08}h1{margin:0 0 8px;color:#102b3f;font-size:25px}.muted{color:#6c7c89;line-height:1.55;margin:0 0 20px}.field{display:grid;gap:7px;margin:16px 0}.field label{font-weight:700;font-size:13px;color:#405462}.field input,.field textarea{width:100%;border:1px solid #cbd7de;border-radius:9px;padding:12px;font:inherit;color:#17212b;background:#fbfcfd}.field textarea{min-height:110px;resize:vertical}button{width:100%;border:0;border-radius:9px;padding:13px;background:#0e8a7a;color:white;font:inherit;font-weight:700;cursor:pointer}button:disabled{opacity:.55;cursor:wait}.note{font-size:12px;color:#6c7c89;line-height:1.5}.result{padding:14px;background:#e9f7ef;border-radius:10px;color:#176b4b;line-height:1.55;overflow-wrap:anywhere}.result a{color:#125b43;font-weight:700}.error{padding:12px;background:#fff0e2;border-radius:9px;color:#8c4a0a}.footer{text-align:center;color:#82919b;font-size:12px;padding:8px 18px 26px}
+    @media(max-width:560px){header{padding:18px}.card{padding:20px;margin-bottom:12px}main{margin:20px auto;padding:0 12px}h1{font-size:22px}}
+  </style>
+</head>
+<body>
+  <header><strong>FixFlow</strong><p>Campus maintenance help for students</p></header>
+  <main>
+    <section class="card">
+      <h1>Report a maintenance issue</h1>
+      <p class="muted">Tell us what needs fixing and where. We’ll route it to the right technician and email you as the visit and repair progress.</p>
+      <form id="reportForm">
+        <div class="field"><label for="description">What is wrong?</label><textarea id="description" required minlength="4" placeholder="Example: The light in my room is not working."></textarea></div>
+        <div class="field"><label for="location">Where is it?</label><input id="location" required placeholder="Building, room, or online service"></div>
+        <div class="field"><label for="email">Your email for updates</label><input id="email" type="email" autocomplete="email" required placeholder="you@example.com"></div>
+        <button id="submitButton" type="submit">Submit issue</button>
+      </form>
+      <div id="reportResult" aria-live="polite"></div>
+    </section>
+    <section class="card">
+      <h2>Track your ticket</h2>
+      <p class="muted" style="margin-bottom:0">After submitting, use your private tracking link to see the scheduled visit, technician updates, and completion photo. Technicians receive their work controls separately by email.</p>
+    </section>
+  </main>
+  <div class="footer">FixFlow · Student maintenance portal</div>
+  <script>
+    const form = document.getElementById('reportForm');
+    const resultBox = document.getElementById('reportResult');
+    const button = document.getElementById('submitButton');
+    const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      button.disabled = true;
+      resultBox.textContent = '';
+      try {
+        const response = await fetch('/api/student-reports', {
+          method: 'POST',
+          headers: {'content-type':'application/json'},
+          body: JSON.stringify({
+            description: document.getElementById('description').value,
+            location: document.getElementById('location').value,
+            email: document.getElementById('email').value
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Could not submit the issue.');
+        resultBox.className = 'result';
+        resultBox.innerHTML = '<strong>' + escapeHtml(data.ticket.id) + ' submitted.</strong><br>We’ll send updates to your email. <a href="' + escapeHtml(data.tracking_url) + '" target="_blank" rel="noreferrer">Open your private ticket status page</a>';
+        form.reset();
+      } catch (error) {
+        resultBox.className = 'error';
+        resultBox.textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

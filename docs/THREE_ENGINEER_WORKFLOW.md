@@ -1,118 +1,94 @@
 # Three-Engineer Build Workflow
 
-## Goal for the 24-hour demo
+## Target demo
 
-Show Tencent WorkBuddy taking real workflow actions through a FixFlow MCP server. A dim-room LDR reading or a student's short free-text report becomes a pending incident. WorkBuddy triages it, the system routes it to the demo technician, and a repair is followed up until the available evidence supports closure.
+Show a student issue or LDR sensor alert becoming a ticket without the student navigating a long helpdesk form or department hierarchy. The assigned technician receives a WhatsApp message and accepts/schedules or declines through its links; a decline moves the ticket to the next available technician and sends another message. Students receive a private tracking page. Completion needs a technician photo approved by AI, and lighting tickets also need recovered sensor readings.
 
-For the live demo, a person can prompt WorkBuddy to process pending incidents. The LDR event itself is recorded automatically, but do not claim that a sensor webhook automatically starts a WorkBuddy run unless that trigger has been implemented and confirmed in your WorkBuddy setup.
+The standalone demo runs locally with Node.js and a browser. The LDR simulator is the guaranteed path; use the physical sensor only if it is stable.
 
-## Architecture / technology flow
+## Architecture
 
 ```mermaid
 flowchart LR
-    subgraph Inputs[Incident inputs]
-        Student[Student QR / short text form]
-        LDR[ESP32 + LDR]
-        Sim[Sensor simulator fallback]
-    end
-
-    subgraph App[FixFlow demo app - TypeScript]
-        Web[Next.js + React + Tailwind dashboard]
-        API[Next.js Route Handlers]
-        DB[(Supabase Postgres incident store)]
-        MCP[FixFlow MCP server<br/>TypeScript, local stdio]
-    end
-
-    WB[Tencent WorkBuddy]
-    Tech[Technician actions in dashboard]
-
-    Student -->|POST report| API
-    LDR -->|HTTP sensor reading| API
-    Sim -->|same sensor JSON| API
-    Web <-->|read ticket / submit action| API
-    API <--> DB
-    WB <-->|MCP tools| MCP
-    MCP <--> API
-    Tech --> Web
-    WB -->|classify, prioritize, route request, follow up| MCP
-    MCP -->|validated result and audit event| API
-    API --> DB
-    DB -->|ticket status and timeline| Web
+    Student[Student short-form report] -->|POST JSON| API[Node.js API + demo rules]
+    LDR[ESP32 + LDR] -->|normalized reading| API
+    Sim[Browser sensor simulator] -->|same JSON payload| API
+    API --> Store[(Local JSON ticket store)]
+    Store --> UI[Student and technician dashboard]
+    API -->|assignment + status| UI
+    UI -->|start work / photo evidence| API
+    API -->|repair photo| AI[Vision model]
+    API -->|assignment WhatsApp with action links| Twilio[Twilio WhatsApp API]
+    Twilio --> Phone[Technician WhatsApp]
+    Phone -->|open action link| Action[Mobile response page]
+    Action -->|POST accept + schedule or decline| API
 ```
 
-Use the existing demo contract for JSON fields and thresholds. Keep the MCP server as a separate process so WorkBuddy can connect to it; its tools should call the app API rather than write around the agreed validation rules. For a local hackathon setup, WorkBuddy's connector guidance allows local MCP processes over stdio. If the team instead uses a remote MCP server, it needs an HTTPS endpoint and a supported transport. [WorkBuddy Connector guide](https://open.workbuddy.cn/en/docs/connector)
+## Stack
 
-## Team ownership
+- **UI:** HTML, CSS, and browser JavaScript for this time-boxed prototype; no frontend build step.
+- **API:** Node.js built-in HTTP server; no extra runtime packages.
+- **WhatsApp:** Twilio sends response links on assignment and reassignment to `FIXFLOW_WHATSAPP_TO`.
+- **Technician response:** the technician opens a mobile response page from WhatsApp, chooses a schedule and accepts or confirms decline. The dashboard does not offer accept/decline controls.
+- **Completion proof:** the technician uploads a photo. The configured vision model must pass it before the server closes the ticket.
+- **Phone URL:** set `FIXFLOW_PUBLIC_URL` to a public HTTPS URL reachable from any network. Use a tunnel for the live demo or deploy the app to a public host.
+- **Persistence:** local `demo/data/tickets.json` file.
+- **Sensor:** browser simulator first; ESP32 can POST the same event JSON to `/api/sensor-events`.
 
-### Engineer 1 — WorkBuddy agent and backend
+## Ownership
 
-- First prove WorkBuddy can call one local FixFlow MCP tool. This is the highest-risk dependency, so do it before building the full app.
-- Implement the pending incident store and API routes for student reports, sensor events, and ticket actions.
-- Implement a fixed demo routing directory and state-transition/verification checks.
-- Implement MCP tools with stable names and typed inputs/outputs:
-  - `list_pending_incidents`
-  - `get_incident_context`
-  - `create_work_order`
-  - `get_sensor_readings`
-  - `verify_and_update_ticket`
-- Write the WorkBuddy instruction/Skill text explaining which tool to call and in what order.
-- The server validates every proposed category, priority, assignment, and state change. WorkBuddy must not directly close a ticket without passing the verification rule.
+### Engineer 1 — API and ticket workflow
 
-The work-order tool input should match this shape (the MCP server assigns the technician from its fixed directory):
-
-```json
-{
-  "incident_id": "incident_001",
-  "category": "lighting",
-  "priority": "medium",
-  "summary": "Room B-204 has insufficient light.",
-  "rationale": "The LDR recorded three consecutive readings below the configured threshold."
-}
-```
+- Own `demo/server.mjs` and API contract changes.
+- Implement request validation, deterministic issue classification, available-technician routing, decline reassignment, schedule actions, duplicate prevention, and sensor verification.
+- Send assignment/reassignment WhatsApp messages through Twilio with one-time response links; process the phone form action and rotate/invalidate links as assignment state changes.
+- Require a completion photo and a passing AI verdict for ticket completion.
+- Configure the app's public URL for links opened on another device.
+- Keep all status transitions and assignments on the server.
+- Pair with Engineer 3 to connect the sensor to `/api/sensor-events` if the hardware is ready.
 
 ### Engineer 2 — student and technician interface
 
-- Build a minimal student form with only a free-text description and location; do not recreate the long helpdesk form.
-- Build a ticket queue and detail view showing WorkBuddy's category, assignment, reason, current status, and event timeline.
-- Add technician actions for accept, start work, and repair attempted.
-- Add a clear “pending WorkBuddy triage” state so the audience can see what the agent still needs to do.
-- Keep the sensor panel as a mountable component; Engineer 3 supplies it.
+- Own `demo/public/index.html` and its dashboard interactions.
+- Keep the student form short: issue description and location only.
+- Keep the dashboard focused on ticket state and repair progress. Accept/decline belongs only to the mobile WhatsApp response page.
+- Display tickets, category, assignment, status, WhatsApp delivery state, photo evidence, sensor evidence, and activity timeline. Give student reporters a private tracking page.
+- Poll the API for new assignments; do not locally invent statuses.
 
-### Engineer 3 — LDR, simulator, and demo integration
+### Engineer 3 — sensor and demo integration
 
-- Calibrate the real LDR and normalize its readings to the agreed `brightness_pct` range.
-- Send readings to the sensor endpoint using the example JSON in `contracts/examples/sensor-event.request.json`.
-- Build a dashboard sensor panel and a simulator that submits the exact same payload. The simulator is the live fallback if hardware or Wi-Fi fails.
-- Coordinate with Engineer 2 on the panel interface, but avoid editing the ticket queue/detail component.
-- Own the seed/reset action and the physical demo setup: dim reading, failed repair, brighter reading.
+- Calibrate the LDR and normalize values to `brightness_pct` from 0 to 100.
+- Send the payload in `contracts/examples/sensor-event.request.json` if integrating ESP32.
+- Keep the browser simulator as the fallback; it already uses the same API shape.
+- Own the reset/rehearsal sequence and the physical setup.
 
 ## 24-hour sequence
 
 | Time | Shared milestone | Engineer 1 | Engineer 2 | Engineer 3 |
 |---|---|---|---|---|
-| 0–1 h | Agree on the contract and demo story. Confirm everyone can open the same WorkBuddy account/client. | Start the MCP server and make WorkBuddy call a simple `list_pending_incidents` stub. | Sketch the queue/detail UI against the existing ticket JSON. | Check LDR wiring and capture raw readings in bright and dim conditions. |
-| 1–4 h | Freeze field names, statuses, and tool inputs. | Implement incident storage, routing map, and MCP tool skeleton. | Build student intake, ticket queue, and detail/timeline using fixture data. | Calibrate and normalize LDR; build the sensor simulator payload. |
-| 4–8 h | First integration: student report and sensor event both appear as pending incidents. | Connect MCP tools to the app API and make WorkBuddy create one routed ticket. | Connect the UI to the app API and show pending/assigned states. | Send real or simulated LDR events to the endpoint; deliver a sensor panel component. |
-| 8–12 h | Run the whole happy path with WorkBuddy making the triage call. | Add duplicate prevention, technician actions, verification, and follow-up tool behavior. | Add technician actions and show WorkBuddy's rationale and timeline. | Integrate the panel and tune thresholds/debounce with the actual room setup. |
-| 12–16 h | Demonstrate a repair attempt that fails verification, then recovers. | Ensure a low reading causes follow-up and a later valid reading allows closure. | Make failed verification and follow-up obvious in the ticket detail. | Rehearse the physical sequence and verify the simulator fallback/reset. |
-| 16–20 h | Freeze new features; fix only demo-blocking issues. | Check MCP connection/recovery and prepare a clean seeded state. | Polish labels, visual hierarchy, and demo screens. | Prepare sensor setup, reset process, and a short live runbook. |
-| 20–24 h | Rehearse the pitch and final demo; use the same sequence every time. | Drive WorkBuddy and explain its tool actions. | Drive student/technician screens. | Trigger the LDR/simulator and narrate the physical evidence. |
+| 0–1 h | Agree on one ticket shape and demo story. Start the app locally. | Confirm API routes and status transitions. | Review the existing dashboard and visual flow. | Wire the LDR; note bright and dark readings. |
+| 1–4 h | First visible end-to-end flow. | Finish report intake, rules, routing, and persistence. | Polish the form, ticket cards, and timeline. | Make low/recovery simulator values match the sensor contract. |
+| 4–8 h | Sensor ticket appears once and is routed. | Finish sample thresholds and duplicate handling. | Show sensor state and assigned ticket in the UI. | Connect real LDR if reliable; otherwise rehearse simulator. |
+| 8–12 h | Technician accepts and schedules from WhatsApp; decline reroutes to the next available person. | Enforce assignment availability, WhatsApp response actions, and server-side verification. | Finish the mobile response page and student tracker. | Calibrate thresholds and reset/demo setup. |
+| 12–16 h | Full failure-then-recovery walkthrough. | Fix only API issues blocking the story. | Refine timeline and technician interaction. | Rehearse dim → failed repair → bright sequence. |
+| 16–20 h | Feature freeze. | Prepare clean data and ensure reset works. | Polish layout, labels, and projector readability. | Confirm hardware fallback and runbook. |
+| 20–24 h | Rehearse the pitch and demo repeatedly. | Narrate routing and ticket state. | Drive student and technician screens. | Trigger sensor or simulator and explain evidence. |
 
 ## Integration checkpoints
 
-1. **Hour 1:** WorkBuddy can call a local MCP tool. If not, stop feature work and resolve connector setup as a team.
-2. **Hour 4:** Frontend and backend agree on one ticket JSON and one sensor-event JSON. Keep the current examples as fixtures.
-3. **Hour 8:** A student report and an LDR event each appear in the same pending incident list.
-4. **Hour 12:** WorkBuddy creates a routed work order from a pending incident and the dashboard shows it.
-5. **Hour 16:** Failed repair remains open; successful sensor verification closes it.
-6. **Hour 20:** Feature freeze. The team rehearses the full sequence and the fallback.
+1. **Hour 1:** app starts at `http://localhost:3000` on each engineer’s machine.
+2. **Hour 4:** a student report creates a ticket with the expected category and fictional assignment.
+3. **Hour 8:** three low LDR readings create one lighting ticket; more low readings do not duplicate it.
+4. **Hour 12:** technician accepts and schedules; a decline reassigns. A still-low reading after repair leaves the ticket in follow-up.
+5. **Hour 16:** three bright readings after the repair attempt close the ticket and add a timeline event.
+6. **Hour 20:** freeze features and rehearse the exact same scenario with a clean reset.
 
 ## Live demo script
 
-1. Student submits “The light in Room B-204 is too dim” or the LDR reports a sustained low reading.
-2. Show the new incident in the dashboard as pending triage.
-3. In WorkBuddy, ask it to process the pending incident. Show WorkBuddy call the MCP tools, classify the issue as lighting, and create a work order routed to Facilities - Electrical.
-4. On the technician view, mark the repair attempted while the LDR still reads low. Ask WorkBuddy to check the case; it records failed verification and follow-up rather than closing it.
-5. Raise the LDR reading (or use the simulator). Ask WorkBuddy to recheck. It records verified closure and the dashboard displays the final timeline.
+1. Click **Simulate dim room** or cover the LDR; show three low readings create and route a lighting ticket.
+2. Open the assignment WhatsApp on the technician phone. Accept and schedule the fix; optionally rehearse Decline to demonstrate reassignment and a fresh message to the next technician.
+3. Start work and click **Mark repair attempted** while brightness remains low; show follow-up instead of a false close.
+4. Click **Room is fixed** or brighten the LDR; show three recovery readings and automatic closure.
+5. Submit “I cannot log in to the student portal” and open the private student page to show status and completion evidence.
 
-If the sensor fails, use the simulator with the same API payload. If WorkBuddy disconnects, reconnect the MCP tool server and reset the demo; do not silently substitute hard-coded agent text for live WorkBuddy calls.
+If hardware fails, use the simulator. For the WhatsApp phone flow, keep the app and public tunnel running. Reset before each rehearsal.

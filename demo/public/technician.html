@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FixFlow — Technician workspace</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f3f6f8;color:#17212b;font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}header{background:#102b3f;color:white;padding:18px max(18px,calc((100vw - 760px)/2))}header strong{font-size:21px}header p{margin:4px 0 0;color:#c5d3dc;font-size:13px}main{max-width:760px;margin:24px auto;padding:0 16px}.card{background:white;border:1px solid #dce4e9;border-radius:15px;padding:22px;margin-bottom:14px;box-shadow:0 5px 20px #102b3f08}h1{margin:0 0 7px;color:#102b3f;font-size:24px}h2{font-size:17px;margin:20px 0 9px;color:#102b3f}.muted{color:#6c7c89;line-height:1.5}.ticketline{display:flex;justify-content:space-between;align-items:center;gap:12px}.pill{display:inline-block;padding:6px 10px;border-radius:20px;background:#e6f2ff;color:#236196;font-size:12px;font-weight:700;text-transform:capitalize;white-space:nowrap}.status-scheduled{background:#e9f7ef;color:#176b4b}.status-in_progress{background:#fff3db;color:#926112}.status-follow_up{background:#fff0e2;color:#9a510c}.status-closed{background:#e5f6ee;color:#147550}.details{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:17px}.detail{background:#f5f8fa;border-radius:9px;padding:11px;color:#6c7c89;font-size:12px}.detail strong{display:block;color:#243b49;font-size:14px;margin-top:4px;overflow-wrap:anywhere}.field{display:grid;gap:7px;margin:14px 0}.field label{font-weight:700;font-size:13px;color:#405462}.field input,.field textarea{width:100%;border:1px solid #cbd7de;border-radius:9px;padding:12px;font:inherit;color:#17212b;background:#fbfcfd}.field textarea{min-height:75px;resize:vertical}button{border:0;border-radius:9px;padding:12px 15px;background:#0e8a7a;color:white;font:inherit;font-weight:700;cursor:pointer}button.secondary{background:#fff0e2;color:#8c4a0a}button:disabled{opacity:.55;cursor:wait}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:13px}.actions button{flex:1}.event{border-top:1px solid #edf1f3;padding:11px 0;color:#415562;line-height:1.45}.event small{display:block;color:#82919b;margin-top:4px}.proof{display:block;max-width:100%;max-height:360px;border-radius:10px;margin-top:10px}.notice{padding:12px;border-radius:9px;background:#eaf4f8;color:#345566;line-height:1.5}.error{background:#fff0e2;color:#8c4a0a}.success{background:#e9f7ef;color:#176b4b}.hidden{display:none}.camera-note{font-size:12px;color:#6c7c89;line-height:1.5}.footer{text-align:center;color:#82919b;font-size:12px;padding:5px 18px 24px}
+    @media(max-width:560px){header{padding:15px 17px}main{margin:13px auto;padding:0 10px}.card{padding:18px}.details{grid-template-columns:1fr}.ticketline{align-items:flex-start;flex-direction:column}.actions{display:grid;grid-template-columns:1fr}.actions button{width:100%}}
+  </style>
+</head>
+<body>
+  <header><strong>FixFlow</strong><p>Technician workspace</p></header>
+  <main>
+    <div class="notice hidden" id="notice" aria-live="polite"></div>
+    <section class="card" id="ticket"><p class="muted">Loading assigned ticket…</p></section>
+    <div class="footer">Use this private link to update the ticket. Students see the status and timeline on their own tracking page.</div>
+  </main>
+  <script>
+    const token = location.pathname.split('/').filter(Boolean).at(-1);
+    const ticketBox = document.getElementById('ticket');
+    const notice = document.getElementById('notice');
+    const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    let lastUpdated = '';
+    let busy = false;
+    const statusText = (status) => String(status || '').replaceAll('_', ' ');
+
+    async function fetchTicket() {
+      const response = await fetch('/api/technician/tickets/' + encodeURIComponent(token), {cache:'no-store'});
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not load this ticket.');
+      if (data.ticket.updated_at !== lastUpdated) render(data.ticket);
+    }
+
+    function render(ticket) {
+      lastUpdated = ticket.updated_at;
+      const schedule = ticket.scheduled_at ? new Date(ticket.scheduled_at).toLocaleString() : 'Not scheduled';
+      const completion = ticket.completion_verification;
+      const completionInfo = completion
+        ? '<div class="notice ' + (completion.state === 'passed' ? 'success' : 'error') + '"><strong>Photo check: ' + escapeHtml(statusText(completion.state)) + '</strong><br>' + escapeHtml(completion.reason || '') + '</div>'
+        : '';
+      const photo = completion?.photo_url ? '<img class="proof" src="' + escapeHtml(completion.photo_url) + '" alt="Submitted completion photo">' : '';
+      const events = (ticket.timeline || []).map((event) => '<div class="event">' + escapeHtml(event.message) + '<small>' + new Date(event.created_at).toLocaleString() + '</small></div>').join('');
+      let controls = '';
+      if (ticket.status === 'assigned') {
+        controls = '<h2>Accept this assignment</h2><p class="muted">Choose the planned visit time. The student will receive an email update.</p><div class="field"><label for="scheduledAt">Visit date and time</label><input id="scheduledAt" type="datetime-local" required></div><div class="actions"><button data-action="accept">Accept and schedule</button><button class="secondary" data-action="decline">Decline assignment</button></div>';
+      } else if (ticket.status === 'scheduled') {
+        controls = '<h2>Work visit</h2><p class="muted">Scheduled for ' + escapeHtml(schedule) + '. Tap when you arrive to notify the student that work has started.</p><div class="actions"><button data-action="start_work">I arrived — start work</button></div>';
+      } else if (ticket.status === 'in_progress') {
+        controls = '<h2>Repair update</h2><div class="field"><label for="workNote">Optional note for the student</label><textarea id="workNote" placeholder="Briefly describe what you found or tried"></textarea></div><div class="actions"><button class="secondary" data-action="repair_attempted">Record repair attempt</button><button data-action="showPhoto">Finish work with a photo</button></div><div id="photoPanel" class="hidden"><div class="field"><label for="completionPhoto">Completion photo</label><input id="completionPhoto" type="file" accept="image/*" capture="environment"><span class="camera-note">On supported phones, this opens the rear camera. You can also choose an existing photo.</span></div><button data-action="complete_work" disabled>Submit photo for AI check</button></div>';
+      } else if (ticket.status === 'follow_up') {
+        controls = '<h2>Follow-up needed</h2><p class="muted">The issue is still open. Resume work, or submit a completion photo if it is now fixed.</p><div class="actions"><button data-action="start_work">Resume work</button><button data-action="showPhoto">Finish work with a photo</button></div><div id="photoPanel" class="hidden"><div class="field"><label for="completionPhoto">Completion photo</label><input id="completionPhoto" type="file" accept="image/*" capture="environment"><span class="camera-note">On supported phones, this opens the rear camera. You can also choose an existing photo.</span></div><button data-action="complete_work" disabled>Submit photo for AI check</button></div>';
+      } else if (ticket.status === 'verification_pending') {
+        controls = '<h2>Verify the repair</h2><p class="muted">Submit a clear photo of the repaired issue. Sensor tickets also need sensor confirmation.</p><div class="field"><label for="completionPhoto">Completion photo</label><input id="completionPhoto" type="file" accept="image/*" capture="environment"><span class="camera-note">On supported phones, this opens the rear camera. You can also choose an existing photo.</span></div><button data-action="complete_work" disabled>Submit photo for AI check</button>';
+      } else if (ticket.status === 'closed') {
+        controls = '<div class="notice success">This repair is complete and passed photo verification.</div>';
+      }
+      ticketBox.innerHTML = '<div class="ticketline"><div><div class="muted">' + escapeHtml(ticket.id) + ' · ' + escapeHtml(ticket.assignment?.department_name || '') + '</div><h1>' + escapeHtml(ticket.summary) + '</h1></div><span class="pill status-' + escapeHtml(ticket.status) + '">' + escapeHtml(statusText(ticket.status)) + '</span></div>'
+        + '<p class="muted">' + escapeHtml(ticket.description) + '</p><div class="details"><div class="detail">Location<strong>' + escapeHtml(ticket.location) + '</strong></div><div class="detail">Assigned technician<strong>' + escapeHtml(ticket.assignment?.technician_name || 'Unassigned') + '</strong></div><div class="detail">Scheduled visit<strong>' + escapeHtml(schedule) + '</strong></div></div>'
+        + completionInfo + photo + controls + '<h2>Ticket activity</h2>' + (events || '<p class="muted">No updates yet.</p>');
+      ticketBox.querySelectorAll('[data-action]').forEach((button) => button.addEventListener('click', () => handleAction(button.dataset.action)));
+      const photoInput = document.getElementById('completionPhoto');
+      if (photoInput) photoInput.addEventListener('change', () => {
+        const submit = ticketBox.querySelector('[data-action="complete_work"]');
+        if (submit) submit.disabled = !photoInput.files?.length;
+      });
+    }
+
+    function showNotice(message, type = '') {
+      notice.className = 'notice ' + type;
+      notice.textContent = message;
+      notice.classList.remove('hidden');
+    }
+
+    async function photoDataUrl(file) {
+      if (!file?.type.startsWith('image/')) throw new Error('Choose a photo from the camera or photo library.');
+      if (!window.createImageBitmap) throw new Error('This browser cannot prepare the photo. Try a recent version of Safari or Chrome.');
+      const bitmap = await createImageBitmap(file);
+      const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
+      canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close();
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.82));
+      if (!blob) throw new Error('Could not prepare the photo. Please choose another image.');
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Could not read the photo.'));
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    async function handleAction(action) {
+      if (action === 'showPhoto') {
+        document.getElementById('photoPanel')?.classList.remove('hidden');
+        return;
+      }
+      if (busy) return;
+      busy = true;
+      notice.classList.add('hidden');
+      const buttons = ticketBox.querySelectorAll('button');
+      buttons.forEach((button) => { button.disabled = true; });
+      try {
+        const payload = {action, technician_token:token};
+        if (action === 'accept') {
+          const local = document.getElementById('scheduledAt')?.value;
+          const date = local ? new Date(local) : null;
+          if (!date || Number.isNaN(date.getTime()) || date.getTime() <= Date.now()) throw new Error('Choose a future visit date and time.');
+          payload.scheduled_at = date.toISOString();
+        }
+        if (action === 'decline' && !confirm('Decline this assignment and send it to the next technician?')) return;
+        if (action === 'repair_attempted') payload.note = document.getElementById('workNote')?.value || '';
+        if (action === 'complete_work') {
+          const file = document.getElementById('completionPhoto')?.files?.[0];
+          if (!file) throw new Error('Take or choose a completion photo first.');
+          showNotice('Checking the photo with AI…');
+          payload.evidence = {data_url: await photoDataUrl(file)};
+        }
+        const response = await fetch('/api/tickets/' + encodeURIComponent((await currentTicketId())) + '/actions', {
+          method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (data.ticket) render(data.ticket);
+        if (!response.ok) throw new Error(data.error || 'Could not update this ticket.');
+        showNotice(action === 'complete_work' ? 'Photo passed AI verification. The ticket is complete.' : 'Ticket updated. The student has been notified by email.', 'success');
+        await fetchTicket();
+      } catch (error) {
+        showNotice(error.message, 'error');
+      } finally {
+        busy = false;
+        ticketBox.querySelectorAll('button').forEach((button) => { button.disabled = button.dataset.action === 'complete_work' && !document.getElementById('completionPhoto')?.files?.length; });
+      }
+    }
+
+    let currentId = '';
+    async function currentTicketId() {
+      if (currentId) return currentId;
+      const response = await fetch('/api/technician/tickets/' + encodeURIComponent(token), {cache:'no-store'});
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not load this ticket.');
+      currentId = data.ticket.id;
+      return currentId;
+    }
+
+    fetchTicket().catch((error) => showNotice(error.message, 'error'));
+    setInterval(() => fetchTicket().catch(() => {}), 5000);
+  </script>
+</body>
+</html>

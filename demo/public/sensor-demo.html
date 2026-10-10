@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FixFlow — LDR sensor demo</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f3f6f8;color:#17212b;font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}header{background:#102b3f;color:white;padding:18px max(18px,calc((100vw - 760px)/2))}header strong{font-size:21px}header p{margin:4px 0 0;color:#c5d3dc;font-size:13px}main{max-width:760px;margin:25px auto;padding:0 16px}.card{background:white;border:1px solid #dce4e9;border-radius:15px;padding:22px;margin-bottom:14px}h1{margin:0 0 8px;color:#102b3f;font-size:24px}.muted{color:#6c7c89;line-height:1.5}.reading{display:flex;justify-content:space-between;align-items:center;padding:17px;border-radius:11px;background:#eff8f6;margin:18px 0}.reading strong{font-size:30px;color:#0e8a7a}.reading span{color:#6c7c89;font-size:13px}.actions{display:flex;gap:10px}button{flex:1;border:0;border-radius:9px;padding:13px 14px;background:#0e8a7a;color:white;font:inherit;font-weight:700;cursor:pointer}button.secondary{background:#eaf1f4;color:#102b3f}button:disabled{opacity:.55;cursor:wait}.message{min-height:55px;padding:13px;background:#f5f8fa;border-radius:9px;color:#415562;line-height:1.5;overflow-wrap:anywhere}.message a{color:#125b43;font-weight:700}.note{font-size:12px;color:#6c7c89;line-height:1.5;margin:14px 0 0}.error{background:#fff0e2;color:#8c4a0a}.footer{text-align:center;color:#82919b;font-size:12px;padding:8px 18px 24px}@media(max-width:560px){header{padding:15px 17px}main{margin:14px auto;padding:0 10px}.card{padding:18px}.actions{display:grid}}
+  </style>
+</head>
+<body>
+  <header><strong>FixFlow</strong><p>LDR sensor demo · Room B-204</p></header>
+  <main>
+    <section class="card">
+      <h1>Simulate room brightness</h1>
+      <p class="muted">Send three low readings to create a lighting ticket. The assigned technician receives a work link by email.</p>
+      <div class="reading"><div><span>Latest simulated brightness</span><br><span id="readingNote">Waiting for a reading</span></div><strong id="readingValue">--%</strong></div>
+      <div class="actions"><button id="dimButton">Simulate dim room</button><button class="secondary" id="brightButton">Send bright readings</button></div>
+      <p class="note">For the verification step, send bright readings after the technician records a repair attempt. A sensor recovery and an AI-approved completion photo are both required to close a sensor ticket.</p>
+    </section>
+    <section class="card"><h2>Latest result</h2><div class="message" id="message">No readings sent yet.</div></section>
+    <div class="footer">LDR demo controls are separate from the student portal.</div>
+  </main>
+  <script>
+    const message = document.getElementById('message');
+    const value = document.getElementById('readingValue');
+    const note = document.getElementById('readingNote');
+    const escapeHtml = (text) => String(text ?? '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    async function sendReading(brightness) {
+      const response = await fetch('/api/sensor-events', {
+        method:'POST', headers:{'content-type':'application/json'},
+        body:JSON.stringify({sensor_id:'ldr_b204',sensor_type:'ldr',metric:'brightness_pct',value:brightness,unit:'%',location:'Room B-204',observed_at:new Date().toISOString()})
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not send the sensor reading.');
+      value.textContent = data.sensor.value + '%';
+      note.textContent = data.sensor.low_count + ' low · ' + data.sensor.recovery_count + ' recovery readings';
+      return data;
+    }
+    async function simulate(brightness, label) {
+      const buttons = document.querySelectorAll('button');
+      buttons.forEach((button) => { button.disabled = true; });
+      message.className = 'message';
+      message.textContent = 'Sending three ' + label + ' readings…';
+      try {
+        let result;
+        for (let i = 0; i < 3; i++) result = await sendReading(brightness);
+        const status = result.ticket_id ? ' Ticket ' + escapeHtml(result.ticket_id) + '.' : '';
+        const tracker = result.tracking_url ? ' <a href="' + escapeHtml(result.tracking_url) + '" target="_blank" rel="noreferrer">Open its private status page</a>.' : '';
+        const assignment = result.action === 'created' ? ' The lighting incident was routed to a technician.' : result.ticket_id ? ' The open lighting incident was updated.' : ' No open lighting incident is currently linked to this sensor.';
+        message.innerHTML = escapeHtml('Three readings sent.' + assignment + status) + tracker;
+      } catch (error) {
+        message.className = 'message error';
+        message.textContent = error.message;
+      } finally {
+        buttons.forEach((button) => { button.disabled = false; });
+      }
+    }
+    document.getElementById('dimButton').addEventListener('click', () => simulate(12, 'low'));
+    document.getElementById('brightButton').addEventListener('click', () => simulate(75, 'bright'));
+  </script>
+</body>
+</html>

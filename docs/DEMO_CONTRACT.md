@@ -1,156 +1,83 @@
 # FixFlow Demo Contract
 
-This file is the agreement for the three-engineer, 24-hour demo. Tencent WorkBuddy is the workflow agent: it reads pending incidents, classifies and prioritizes them, and chooses the next action using FixFlow MCP tools. The backend/MCP server owns persistence, the approved routing directory, duplicate prevention, valid state transitions, and sensor verification. The frontend submits inputs and renders canonical records; it must not invent statuses or assignments.
+The standalone app owns student intake, demo classification, technician routing, ticket state, WhatsApp assignment notifications, AI photo verification, and the activity timeline. The browser renders server responses; it does not invent assignments or statuses.
 
 ## Demo scope
 
-- Primary flow: an LDR detects a room that is too dark and records a pending incident. WorkBuddy processes it through MCP, routes a lighting work order, and verifies the repair from later sensor readings.
-- Secondary flow: a student enters a short free-text issue (for example, a portal login problem). WorkBuddy classifies it and proposes the department and technician through MCP.
-- WorkBuddy must perform live classification and workflow actions through the FixFlow MCP server during the demo. Do not replace WorkBuddy calls with a mocked agent response.
-- Technician notifications and follow-up messages may be represented in the ticket timeline; sending real email or messages is out of scope.
-- The DHT/air-conditioning scenario is a future extension. Do not build it before both flows above work.
+- Three sustained low-light LDR readings create one lighting ticket and route it to a technician. The technician receives WhatsApp action links to accept and schedule or decline; declines move the ticket to the next available technician.
+- Students receive a private tracking URL after submitting a report. Its page polls for status and timeline updates and displays the verified completion photo.
+- A technician starts work, may report a sensor repair attempt, and submits a completion photo. The configured Gemini vision model must return `fixed: true` with confidence at or above `FIXFLOW_VERIFICATION_CONFIDENCE` (default `0.7`) before completion is accepted. An unavailable AI service, inconclusive image, or failed verdict leaves the ticket open.
+- Sensor tickets also require three recovery readings at or above 40%. The sensor and AI photo check must both pass before closure.
+- Department assignments and technician identities are fictional. University integration, technician accounts, and production authentication are out of scope.
 
 ## Shared conventions
 
-- JSON field names use `snake_case`.
-- Timestamps are ISO 8601 UTC strings, for example `2026-10-10T06:30:00Z`.
-- IDs are strings. The backend may use UUIDs; examples use readable IDs.
-- Missing optional values are omitted or `null`, consistently. Do not send empty strings as missing values.
-- Sensor units are explicit. The LDR reading sent to the API is normalized to `brightness_pct` from `0` (dark) to `100` (bright); do not send raw ADC counts to ticket logic.
-- Demo-only routing is a fixed local directory, not the real university helpdesk.
+- JSON field names use snake_case; timestamps use ISO 8601; ticket IDs use `FX-0001` format.
+- Sensor readings use normalized brightness_pct from 0 (dark) to 100 (bright), never raw ADC counts.
+- The private student tracking token and technician action token are not included in ordinary ticket API responses.
 
 ## Ticket shape
 
-```json
-{
-  "id": "ticket_001",
-  "source": "sensor",
-  "summary": "Low light detected in Room B-204",
-  "description": "Room brightness stayed below the configured threshold.",
-  "category": "lighting",
-  "priority": "medium",
-  "location": "Room B-204",
-  "status": "assigned",
-  "assignment": {
-    "department_id": "facilities_electrical",
-    "department_name": "Facilities - Electrical",
-    "technician_id": "tech_01",
-    "technician_name": "Demo Technician"
-  },
-  "verification": {
-    "type": "ldr_brightness",
-    "state": "pending",
-    "last_value": 12,
-    "unit": "%"
-  },
-  "created_at": "2026-10-10T06:30:00Z",
-  "updated_at": "2026-10-10T06:30:00Z"
-}
-```
+    {
+      "id": "FX-0001",
+      "source": "student_report",
+      "summary": "Cannot log in to the student portal",
+      "location": "Online",
+      "status": "scheduled",
+      "notification": { "channel": "whatsapp", "recipient": "whatsapp:+60123456789", "status": "sent" },
+      "completion_verification": null,
+      "timeline": [],
+      "created_at": "2026-10-10T06:30:00.000Z",
+      "updated_at": "2026-10-10T06:30:00.000Z"
+    }
 
-`source` is `student_report` or `sensor`. `category` is `lighting`, `air_conditioning`, `student_portal`, or `other`. `priority` is `low`, `medium`, or `high`. `verification.state` is `pending`, `passed`, or `failed`.
+Possible status values are `assigned`, `scheduled`, `in_progress`, `verification_pending`, `follow_up`, `unassigned`, and `closed`.
 
-## API contract
+## API
 
-All routes can live in the Next.js app. Keep the API surface small:
+### `GET /api/state`
 
-### `POST /api/tickets` — student report
+Returns current tickets, sensors, technicians, and thresholds for the demo dashboard.
 
-Request:
+### `POST /api/student-reports`
 
-```json
-{
-  "description": "I cannot log in to the student portal.",
-  "location": "Online"
-}
-```
+Request: `{ "description": "I cannot log in to the student portal.", "location": "Online" }`.
 
-The backend stores this as a pending intake item. WorkBuddy reads it through MCP, derives category and priority, and requests a work order. The MCP server validates the category and priority, maps the category to the approved demo directory, persists the assignment, and returns the canonical ticket object above. The UI should not ask students to select a department or technician.
+Creates and routes a ticket, sends the WhatsApp assignment when configured, and returns `tracking_url`. Share this private URL with the reporting student.
 
-### `POST /api/sensor-events` — sensor reading
+### `GET /student/{token}` and `GET /api/student/tickets/{token}`
 
-Request:
+The student page polls its token-scoped API for ticket status, timeline events, and completion evidence. It does not expose other tickets.
 
-```json
-{
-  "sensor_id": "ldr_b204",
-  "sensor_type": "ldr",
-  "metric": "brightness_pct",
-  "value": 12,
-  "unit": "%",
-  "location": "Room B-204",
-  "observed_at": "2026-10-10T06:30:00Z"
-}
-```
+### `POST /api/sensor-events`
 
-The endpoint stores readings for sensor evidence. A sustained low reading creates a pending incident; later readings update evidence on the active lighting ticket, including bright readings used for recovery verification. Response: `{ "incident_id": "incident_001", "action": "created|updated|ignored" }`. A missing `incident_id` means the reading was neither a trigger nor evidence for an open ticket. Repeated low readings for the same active issue should update its evidence, not create duplicate tickets.
+Three consecutive values below 25 create one sensor ticket. After a repair attempt, three values at or above 40 set sensor verification to passed. They do not close the ticket without the technician photo check.
 
-### `PATCH /api/tickets/{id}/status` — technician action
+### `POST /api/tickets/{id}/actions`
 
-Request:
+Supported actions:
 
-```json
-{
-  "action": "repair_attempted",
-  "note": "Replaced the room light."
-}
-```
+    { "action": "start_work" }
+    { "action": "repair_attempted", "note": "Replaced the room light." }
+    { "action": "complete_work", "evidence": { "data_url": "data:image/jpeg;base64,..." } }
 
-Allowed actions are `accept`, `start_work`, and `repair_attempted`. `repair_attempted` moves the ticket to verification; the server decides whether the ticket closes or needs follow-up based on sensor evidence. The frontend must not directly set `status` to `closed`.
+`complete_work` requires a photo. The server sends it with the ticket context to the configured Gemini `generateContent` vision model. Only a positive verdict above the confidence threshold can close a ticket. Sensor tickets also require passed LDR recovery verification. A failed check is recorded in the timeline and the ticket remains open.
 
-## Ticket lifecycle
+Technicians accept or decline through the mobile action page linked in WhatsApp. The action token is private and invalidated after acceptance or reassignment.
 
-```text
-new -> assigned -> in_progress -> verification_pending -> closed
-                                               \-> follow_up -> in_progress
-```
+### `POST /api/demo/reset`
 
-- Student reports and qualifying sensor events create `new` tickets; successful routing moves them to `assigned`.
-- Technician actions move a ticket to `in_progress` and then `verification_pending`.
-- Failed verification moves it to `follow_up`; a successful check moves it to `closed`.
-- Every transition and sensor check should appear in the incident timeline, even if notifications are simulated.
+Clears tickets and sensor state for the next rehearsal.
 
-## WorkBuddy MCP contract
+## Configuration
 
-WorkBuddy is the agent used during the demo. It calls the FixFlow MCP server to read incident context and request workflow actions; the server validates and records those actions. The initial tool set is:
-
-| Tool | Purpose |
-|---|---|
-| `list_pending_incidents` | Return student reports and sensor incidents that have not been triaged. |
-| `get_incident_context` | Return the incident, related open tickets, and recent sensor readings. |
-| `create_work_order` | Accept WorkBuddy's category, priority, summary, and rationale; validate them and map the category through the fixed demo routing table. |
-| `get_sensor_readings` | Return recent normalized readings for a sensor linked to an open ticket. |
-| `verify_and_update_ticket` | Check the server-side repair evidence and move the ticket to `closed` or `follow_up`; WorkBuddy cannot force closure. |
-
-For the 24-hour demo, a person can start processing by prompting WorkBuddy. Sensor events enter the pending queue automatically, but do not claim that a sensor webhook starts a WorkBuddy run unless that trigger is confirmed in the chosen WorkBuddy setup.
-
-## LDR demo parameters
-
-Use these as initial demo values and calibrate against the actual board and room before presenting:
-
-| Parameter | Initial value | Meaning |
-|---|---:|---|
-| `LDR_SAMPLE_INTERVAL_MS` | `1000` | Read the sensor once per second. |
-| `LDR_LOW_LIGHT_THRESHOLD_PCT` | `25` | Below this is considered too dark. |
-| `LDR_RECOVERY_THRESHOLD_PCT` | `40` | At or above this is considered bright enough; the gap prevents flickering around one threshold. |
-| `LDR_REQUIRED_CONSECUTIVE_SAMPLES` | `3` | Require three qualifying readings before creating or verifying a ticket. |
-
-Create a lighting ticket when brightness is below `25` for three consecutive readings. After a technician reports a repair attempt, close only when brightness is at least `40` for three consecutive readings. Otherwise set `follow_up` and record a failed verification event. These values are demo parameters, not university maintenance policy.
+Copy `demo/.env.example` to `demo/.env` and configure Twilio WhatsApp credentials (`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`, `FIXFLOW_WHATSAPP_TO`) and `GEMINI_API_KEY`. Optional model settings are `FIXFLOW_VISION_MODEL`, the comma-separated `FIXFLOW_VISION_FALLBACK_MODELS`, and `FIXFLOW_VERIFICATION_CONFIDENCE`. On rate limits, unavailable models, overload, timeouts, or unusable responses, photo verification tries the fallback models in order. Set `FIXFLOW_PUBLIC_URL` to the HTTPS app URL before creating tickets so WhatsApp links work on the technician's phone. Credentials and photos stay on the server; do not commit `.env`.
 
 ## Fixed demo routing
 
-| Category | Department | Technician |
+| Category | Department | Technician order |
 |---|---|---|
-| `lighting` | `facilities_electrical` | `tech_01` |
-| `air_conditioning` | `facilities_mechanical` | `tech_02` |
-| `student_portal` | `it_services` | `tech_03` |
-| `other` | `helpdesk_triage` | `tech_00` |
-
-For this demo, a low-confidence or unmatched student report goes to `other`; do not guess an owner. Names and assignments are fictional demo data.
-
-## Engineer ownership
-
-- **Engineer 1 — WorkBuddy and workflow backend:** implements the MCP server and tools, pending-incident store, routing directory, duplicate handling, allowed state transitions, verification, and audit timeline. WorkBuddy makes the triage decision; this engineer makes tool actions safe and persistent.
-- **Engineer 2 — student and technician web UI:** builds the free-text intake, ticket queue and detail view, technician actions, and event timeline using only the API contract above.
-- **Engineer 3 — IoT and demo integration:** calibrates the LDR, sends normalized readings to the sensor endpoint, builds a sensor simulator fallback, and owns the sensor panel and end-to-end demo reset/runbook. The sensor panel should be a separate component that Engineer 2 can place in the dashboard.
-- All three agree before changing fields or statuses. Engineer 1 owns the MCP/API contract; Engineer 2 and Engineer 3 consume it. If a field or status needs to change, update this contract first and tell the others.
+| lighting | Facilities - Electrical | Aina Rahman → Amir Hassan → Sofia Lim |
+| air_conditioning | Facilities - Mechanical | Daniel Lee → Priya Nair |
+| student_portal | IT Services | Mei Tan → Arun Kumar |
+| other | Helpdesk Triage | Helpdesk Team |

@@ -1,0 +1,11 @@
+# Local demo data and dependencies
+demo/data/tickets.json
+demo/data/evidence/
+demo/.env
+demo/.env.example.zip
+.env
+node_modules/
+dist/
+
+# macOS metadata
+.DS_Store
