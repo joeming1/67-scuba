@@ -529,6 +529,11 @@ async function applyAssignmentResponse(ticket, action, scheduledAt, baseUrl) {
 }
 
 async function handleApi(request, response, pathname) {
+  if (request.method === 'GET' && pathname === '/api/sensor-events') {
+    const sensors = Object.entries(latestSensors).map(([sensor_id, sensor]) => ({ sensor_id, ...sensor }));
+    return send(response, 200, { sensors, server_time: now() });
+  }
+
   const technicianTicketMatch = pathname.match(/^\/api\/technician\/tickets\/([A-Za-z0-9_-]+)$/);
   if (request.method === 'GET' && technicianTicketMatch) {
     const ticket = findTechnicianWorkspaceTicket(technicianTicketMatch[1]);
@@ -580,6 +585,7 @@ async function handleApi(request, response, pathname) {
     sensor.value = value;
     sensor.location = location;
     sensor.observed_at = body.observed_at || now();
+    sensor.received_at = now();
     sensor.low_count = value < LOW_LIGHT_THRESHOLD ? sensor.low_count + 1 : 0;
     sensor.recovery_count = value >= RECOVERY_THRESHOLD ? sensor.recovery_count + 1 : 0;
     latestSensors[sensorId] = sensor;
@@ -593,16 +599,26 @@ async function handleApi(request, response, pathname) {
     } else if (ticket) {
       action = 'updated';
       if (ticket.verification) ticket.verification.last_value = value;
-      if (ticket.status === 'verification_pending' || ticket.status === 'follow_up') {
+      const sensorVerificationStarted = ticket.status === 'verification_pending'
+        || ticket.status === 'follow_up'
+        || (ticket.status === 'in_progress' && ticket.completion_verification?.state === 'passed');
+      if (sensorVerificationStarted) {
         if (value < RECOVERY_THRESHOLD) {
           ticket.status = 'follow_up';
+          if (ticket.verification) ticket.verification.state = 'failed';
           if (ticket.timeline[0]?.message !== `Verification still low at ${value}%; technician follow-up required.`) {
             addEvent(ticket, `Verification still low at ${value}%; technician follow-up required.`, 'follow_up');
           }
-        } else if (sensor.recovery_count >= REQUIRED_SAMPLES) {
+        } else if (sensor.recovery_count >= REQUIRED_SAMPLES && ticket.verification?.state !== 'passed') {
           if (ticket.verification) ticket.verification.state = 'passed';
-          ticket.status = 'verification_pending';
-          addEvent(ticket, `Sensor confirms brightness recovered to ${value}%; technician photo verification is still required before completion.`, 'verification');
+          if (ticket.completion_verification?.state === 'passed') {
+            ticket.status = 'closed';
+            addEvent(ticket, `Repair completed and verified by LDR recovery (${value}%) and AI photo check.`, 'closed');
+            await emailStudentUpdate(ticket, 'The room sensor confirmed brightness recovery and the completion photo passed AI verification. The repair is complete.', requestBaseUrl(request));
+          } else {
+            ticket.status = 'verification_pending';
+            addEvent(ticket, `Sensor confirms brightness recovered to ${value}%; technician photo verification is still required before completion.`, 'verification');
+          }
         }
       }
     }
@@ -657,8 +673,9 @@ async function handleApi(request, response, pathname) {
       if (ticket.source === 'sensor') {
         ticket.status = 'verification_pending';
         if (ticket.verification) ticket.verification.state = 'pending';
-        addEvent(ticket, 'Technician reported a repair attempt. Waiting for the LDR to verify room brightness.', 'verification');
         const sensor = latestSensors[ticket.sensor_id];
+        if (sensor) sensor.recovery_count = 0;
+        addEvent(ticket, 'Technician reported a repair attempt. Waiting for the LDR to verify room brightness.', 'verification');
         if (sensor && sensor.value < RECOVERY_THRESHOLD) {
           ticket.status = 'follow_up';
           if (ticket.verification) ticket.verification.state = 'failed';
@@ -689,6 +706,10 @@ async function handleApi(request, response, pathname) {
         return send(response, 422, { error: 'The photo did not verify that the issue is fixed. Add a clearer photo or continue the repair.', ticket: publicTicket(ticket) });
       }
       if (ticket.source === 'sensor' && ticket.verification?.state !== 'passed') {
+        ticket.status = 'verification_pending';
+        if (ticket.verification) ticket.verification.state = 'pending';
+        const sensor = latestSensors[ticket.sensor_id];
+        if (sensor) sensor.recovery_count = 0;
         addEvent(ticket, `AI photo check passed, but the light sensor has not confirmed recovery: ${verification.reason}`, 'verification');
         await emailStudentUpdate(ticket, 'The completion photo passed, but the room sensor has not confirmed the repair. The ticket remains open.', requestBaseUrl(request));
         await saveState();

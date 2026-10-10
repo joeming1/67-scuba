@@ -10,15 +10,15 @@ Requires Node.js 20 or newer. No package install is needed.
 node demo/server.mjs
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000). Choose **Run the LDR sensor demo** to trigger the sensor-created ticket flow without continuously running the demo. The physical sender and calibration helper are in [`sensor/`](sensor/README.md).
 
 ## Walkthrough
 
-1. Submit a student issue from the website with an email address. The site returns a private tracking page.
-2. The technician receives an assignment email with a private mobile workspace link. They accept and schedule the visit there.
+1. From the student portal, choose **Run the LDR sensor demo**. Click its one-time dim-room action, or power and calibrate the ESP32 sender. Three sustained low readings create and route a lighting ticket without a student report.
+2. The technician receives an assignment through the configured email or WhatsApp channel and opens the private mobile workspace to accept and schedule the visit.
 3. At the visit, the technician taps **I arrived — start work**. If the repair needs follow-up, they record an attempt and can resume later.
-4. To finish, the technician takes or chooses a completion photo in that workspace. Gemini checks the photo; only a passing check closes the ticket.
-5. The student tracking page and student email show the schedule, work updates, outcome, and completion photo.
+4. To finish, the technician takes or chooses a completion photo in that workspace. Gemini checks the photo, and sensor tickets also require three bright recovery readings; only both passing checks close the ticket.
+5. The private student tracking page shows the schedule, work updates, outcome, timeline, and completion photo.
 
 Ticket state is stored in `demo/data/tickets.json`; **Reset demo** clears it.
 

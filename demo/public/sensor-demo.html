@@ -13,10 +13,11 @@
   <main>
     <section class="card">
       <h1>Simulate room brightness</h1>
-      <p class="muted">Send three low readings to create a lighting ticket. The assigned technician receives a work link by email.</p>
-      <div class="reading"><div><span>Latest simulated brightness</span><br><span id="readingNote">Waiting for a reading</span></div><strong id="readingValue">--%</strong></div>
-      <div class="actions"><button id="dimButton">Simulate dim room</button><button class="secondary" id="brightButton">Send bright readings</button></div>
+      <p class="muted">This is a manual, one-time demo. Click once to send three low readings and create a lighting ticket; nothing samples or submits in the background. The ESP32 can use the same API while powered on.</p>
+      <div class="reading"><div><span>Latest received brightness</span><br><span id="readingNote">Waiting for a reading</span><br><span id="feedStatus" role="status">Connecting to sensor feed…</span></div><strong id="readingValue">--%</strong></div>
+      <div class="actions"><button id="dimButton">Run demo — simulate dim room</button><button class="secondary" id="brightButton">Send bright readings</button></div>
       <p class="note">For the verification step, send bright readings after the technician records a repair attempt. A sensor recovery and an AI-approved completion photo are both required to close a sensor ticket.</p>
+      <p class="note"><a href="/sensor-calibrate.html">Open the LDR calibration helper</a> · Physical sensor setup is in <code>sensor/README.md</code>.</p>
     </section>
     <section class="card"><h2>Latest result</h2><div class="message" id="message">No readings sent yet.</div></section>
     <div class="footer">LDR demo controls are separate from the student portal.</div>
@@ -25,7 +26,36 @@
     const message = document.getElementById('message');
     const value = document.getElementById('readingValue');
     const note = document.getElementById('readingNote');
+    const feedStatus = document.getElementById('feedStatus');
     const escapeHtml = (text) => String(text ?? '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    function renderSensor(sensor) {
+      value.textContent = sensor.value + '%';
+      const updatedAt = sensor.received_at || sensor.observed_at;
+      const ageMs = Date.now() - Date.parse(updatedAt);
+      const time = Number.isFinite(ageMs) ? new Date(updatedAt).toLocaleTimeString() : 'time unavailable';
+      const live = Number.isFinite(ageMs) && ageMs <= 6000;
+      note.textContent = `${sensor.location || 'Unknown location'} · last received ${time} · ${sensor.low_count || 0} low / ${sensor.recovery_count || 0} recovery samples`;
+      feedStatus.textContent = live ? 'Live · receiving sensor readings' : 'Waiting for the next sensor reading';
+      feedStatus.style.color = live ? '#176b4b' : '#6c7c89';
+    }
+    async function refreshSensor() {
+      try {
+        const response = await fetch('/api/sensor-events', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Sensor feed returned ' + response.status);
+        const data = await response.json();
+        const sensor = (data.sensors || []).find((item) => item.sensor_id === 'ldr_b204');
+        if (sensor) renderSensor(sensor);
+        else {
+          value.textContent = '--%';
+          note.textContent = 'No readings received yet';
+          feedStatus.textContent = 'Waiting for sensor readings';
+          feedStatus.style.color = '#6c7c89';
+        }
+      } catch (error) {
+        feedStatus.textContent = 'Sensor feed unavailable';
+        feedStatus.style.color = '#8c4a0a';
+      }
+    }
     async function sendReading(brightness) {
       const response = await fetch('/api/sensor-events', {
         method:'POST', headers:{'content-type':'application/json'},
@@ -33,8 +63,7 @@
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Could not send the sensor reading.');
-      value.textContent = data.sensor.value + '%';
-      note.textContent = data.sensor.low_count + ' low · ' + data.sensor.recovery_count + ' recovery readings';
+      renderSensor(data.sensor);
       return data;
     }
     async function simulate(brightness, label) {
@@ -58,6 +87,8 @@
     }
     document.getElementById('dimButton').addEventListener('click', () => simulate(12, 'low'));
     document.getElementById('brightButton').addEventListener('click', () => simulate(75, 'bright'));
+    refreshSensor();
+    window.setInterval(refreshSensor, 1500);
   </script>
 </body>
 </html>
