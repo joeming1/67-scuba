@@ -1,0 +1,197 @@
+{
+  "next_number": 3,
+  "tickets": [
+    {
+      "id": "FX-0002",
+      "source": "sensor",
+      "summary": "Low light detected in Room B-204",
+      "description": "Room brightness stayed below 25% for 3 consecutive readings.",
+      "category": "lighting",
+      "priority": "medium",
+      "location": "Room B-204",
+      "student_email": null,
+      "status": "closed",
+      "assignment": {
+        "department_id": "facilities_electrical",
+        "department_name": "Facilities - Electrical",
+        "technician_id": "tech_01",
+        "technician_name": "Aina Rahman",
+        "response": "accepted"
+      },
+      "declined_technician_ids": [],
+      "scheduled_at": "2026-10-10T17:23:00.000Z",
+      "notification": {
+        "channel": "email",
+        "recipient": "laijoeming@gmail.com",
+        "status": "sent",
+        "updated_at": "2026-10-10T17:21:22.107Z",
+        "provider_id": "01a126d5-683d-76a2-a46e-a2bcb141a160"
+      },
+      "technician_action_token": "qIkNXc2ABH2O8DQjGqvhEGAlm-oNQQzXHLqTzDVlyTI",
+      "student_tracking_token": "O8aUQdH2O4OaYmb1ZJIvHAXsofCRz-mR",
+      "completion_verification": {
+        "state": "passed",
+        "fixed": true,
+        "confidence": 0.95,
+        "reason": "The image shows multiple ceiling lights turned on and providing good illumination in the room.",
+        "model": "gemini-3.5-flash-lite",
+        "photo_url": "/evidence/fx-0002-60ecbd36-7434-4296-9aff-596a8e210dc8.jpg",
+        "checked_at": "2026-10-10T17:22:41.573Z"
+      },
+      "sensor_id": "ldr_b204",
+      "verification": {
+        "type": "ldr_brightness",
+        "state": "passed",
+        "last_value": 98,
+        "unit": "%"
+      },
+      "timeline": [
+        {
+          "id": "b3f8e8bb-7218-4344-a9a4-d4da222e6d72",
+          "type": "closed",
+          "message": "Repair completed and verified by LDR recovery (98%) and AI photo check.",
+          "created_at": "2026-10-10T17:22:47.510Z"
+        },
+        {
+          "id": "5dcf0f25-a7a1-49b1-a95b-14a41093857e",
+          "type": "verification",
+          "message": "AI photo check passed, but the light sensor has not confirmed recovery: The image shows multiple ceiling lights turned on and providing good illumination in the room.",
+          "created_at": "2026-10-10T17:22:41.573Z"
+        },
+        {
+          "id": "0743f53e-37d2-4334-9d86-20d248850f7f",
+          "type": "work_started",
+          "message": "Aina Rahman arrived and started work. The visit was scheduled for 10/11/2026, 1:23:00 AM.",
+          "created_at": "2026-10-10T17:22:03.672Z"
+        },
+        {
+          "id": "24d9f3c3-211e-4d1c-97c4-cbfe71289921",
+          "type": "scheduled",
+          "message": "Aina Rahman accepted and scheduled the fix for 10/11/2026, 1:23:00 AM.",
+          "created_at": "2026-10-10T17:22:01.369Z"
+        },
+        {
+          "id": "b31af465-6de2-4db9-90a4-a6771fdd0f0d",
+          "type": "notification",
+          "message": "Email assignment with technician response links sent to laijoeming@gmail.com.",
+          "created_at": "2026-10-10T17:21:22.735Z"
+        },
+        {
+          "id": "b6aca59d-1d0c-4899-9033-97c7e5065b47",
+          "type": "assigned",
+          "message": "Assigned to Aina Rahman in Facilities - Electrical; awaiting response.",
+          "created_at": "2026-10-10T17:21:22.106Z"
+        },
+        {
+          "id": "d308ffa3-cf6c-4f37-9f8d-05c3ff182cc0",
+          "type": "created",
+          "message": "Auto-created after 3 low-light readings (0%).",
+          "created_at": "2026-10-10T17:21:22.106Z"
+        }
+      ],
+      "created_at": "2026-10-10T17:21:22.106Z",
+      "updated_at": "2026-10-10T17:22:47.510Z",
+      "email_update": {
+        "status": "sent",
+        "updated_at": "2026-10-10T17:22:48.036Z",
+        "id": "01a126d6-b5ba-76c9-9d33-d70dfef5d693"
+      }
+    },
+    {
+      "id": "FX-0001",
+      "source": "sensor",
+      "summary": "Low light detected in Room B-204",
+      "description": "Room brightness stayed below 25% for 3 consecutive readings.",
+      "category": "lighting",
+      "priority": "medium",
+      "location": "Room B-204",
+      "student_email": null,
+      "status": "closed",
+      "assignment": {
+        "department_id": "facilities_electrical",
+        "department_name": "Facilities - Electrical",
+        "technician_id": "tech_01",
+        "technician_name": "Aina Rahman",
+        "response": "accepted"
+      },
+      "declined_technician_ids": [],
+      "scheduled_at": "2026-10-11T17:10:00.000Z",
+      "notification": {
+        "channel": "email",
+        "recipient": "laijoeming@gmail.com",
+        "status": "sent",
+        "updated_at": "2026-10-10T17:10:00.057Z",
+        "provider_id": "01a126cb-0174-77e7-8ec4-18a1fb70c759"
+      },
+      "technician_action_token": "SBdUTHK4H2LL_CmpNWNXe5PtO-_srKpAPNNYnN9qVaQ",
+      "student_tracking_token": "7-cVeYznFUV_kTeGKYoH79LhcQd3y6hy",
+      "completion_verification": {
+        "state": "passed",
+        "fixed": true,
+        "confidence": 0.9,
+        "reason": "The ceiling lights are illuminated and the room is visibly well lit.",
+        "model": "gemini-3.8-flash",
+        "photo_url": "/evidence/fx-0001-5ea50308-2dd5-47c7-96cb-8bf02cc06837.jpg",
+        "checked_at": "2026-10-10T17:11:05.568Z"
+      },
+      "sensor_id": "ldr_b204",
+      "verification": {
+        "type": "ldr_brightness",
+        "state": "passed",
+        "last_value": 70,
+        "unit": "%"
+      },
+      "timeline": [
+        {
+          "id": "4b8d264c-684f-4c4c-b428-15a2c9b18f6f",
+          "type": "closed",
+          "message": "Repair completed and verified by LDR recovery (70%) and AI photo check.",
+          "created_at": "2026-10-10T17:20:51.755Z"
+        },
+        {
+          "id": "b3a460db-a507-4183-987e-b43521727174",
+          "type": "verification",
+          "message": "AI photo check passed, but the light sensor has not confirmed recovery: The ceiling lights are illuminated and the room is visibly well lit.",
+          "created_at": "2026-10-10T17:11:05.568Z"
+        },
+        {
+          "id": "2f348ef4-72fd-47bc-8bba-64886d87f837",
+          "type": "work_started",
+          "message": "Aina Rahman arrived and started work. The visit was scheduled for 10/12/2026, 1:10:00 AM.",
+          "created_at": "2026-10-10T17:10:50.638Z"
+        },
+        {
+          "id": "36618c57-e42d-4dc8-81f6-c7f0bc0701fc",
+          "type": "scheduled",
+          "message": "Aina Rahman accepted and scheduled the fix for 10/12/2026, 1:10:00 AM.",
+          "created_at": "2026-10-10T17:10:47.976Z"
+        },
+        {
+          "id": "a2ca1f9e-223a-432b-a2b6-af442dbe5157",
+          "type": "notification",
+          "message": "Email assignment with technician response links sent to laijoeming@gmail.com.",
+          "created_at": "2026-10-10T17:10:01.033Z"
+        },
+        {
+          "id": "acd69baf-53a8-4d39-a9ec-8a460e3d9e29",
+          "type": "assigned",
+          "message": "Assigned to Aina Rahman in Facilities - Electrical; awaiting response.",
+          "created_at": "2026-10-10T17:10:00.056Z"
+        },
+        {
+          "id": "61d11fb9-49eb-4a5b-b123-2e5c698a5381",
+          "type": "created",
+          "message": "Auto-created after 3 low-light readings (0%).",
+          "created_at": "2026-10-10T17:10:00.056Z"
+        }
+      ],
+      "created_at": "2026-10-10T17:10:00.055Z",
+      "updated_at": "2026-10-10T17:20:51.755Z",
+      "email_update": {
+        "status": "sent",
+        "updated_at": "2026-10-10T17:20:53.942Z",
+        "id": "01a126d4-f710-72d9-8c61-e9dc8e91043a"
+      }
+    }
+  ]
+}
