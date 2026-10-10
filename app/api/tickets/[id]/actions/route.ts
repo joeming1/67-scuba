@@ -9,16 +9,44 @@ import {
   publicTicket,
   requestBaseUrl,
   persistTicket,
+  getTickets,
   RECOVERY_THRESHOLD,
   getSensor,
+  setSensor,
 } from "@/lib/store";
+import { isSupabaseConfigured } from "@/lib/supabase";
+import { dbGetTicketById } from "@/lib/db";
+import type { Ticket } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+/**
+ * When Supabase is configured (Vercel), load the ticket directly from DB by ID.
+ * Also inject it into the in-memory array so mutation functions work correctly,
+ * and persistTicket() saves mutations back to Supabase.
+ */
+async function loadTicketById(id: string): Promise<Ticket | undefined> {
+  if (isSupabaseConfigured()) {
+    const ticket = await dbGetTicketById(id);
+    if (!ticket) return undefined;
+    // Inject into in-memory array so mutation functions find it
+    const tickets = getTickets();
+    const existingIdx = tickets.findIndex((t) => t.id === ticket.id);
+    if (existingIdx >= 0) {
+      tickets[existingIdx] = ticket;
+    } else {
+      tickets.unshift(ticket);
+    }
+    return ticket;
+  }
+  // Local dev fallback
   await loadState();
+  return findTicketById(id);
+}
+
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const ticket = findTicketById(decodeURIComponent(id));
+  const ticket = await loadTicketById(decodeURIComponent(id));
   if (!ticket) return NextResponse.json({ error: "Ticket not found." }, { status: 404 });
   const body = await request.json().catch(() => ({}));
   const action = body.action;
@@ -57,7 +85,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       ticket.status = "verification_pending";
       ticket.verification.state = "pending";
       const sensor = getSensor(ticket.sensor_id);
-      if (sensor) sensor.recovery_count = 0;
+      if (sensor) {
+        sensor.recovery_count = 0;
+        await setSensor(ticket.sensor_id, sensor);
+      }
       addEvent(ticket, "Technician reported a repair attempt. Waiting for the LDR to verify room brightness.", "verification");
       if (sensor && sensor.value !== null && sensor.value < RECOVERY_THRESHOLD) {
         ticket.status = "follow_up";
@@ -93,7 +124,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       ticket.status = "verification_pending";
       if (ticket.verification) ticket.verification.state = "pending";
       const sensor = getSensor(ticket.sensor_id);
-      if (sensor) sensor.recovery_count = 0;
+      if (sensor) {
+        sensor.recovery_count = 0;
+        await setSensor(ticket.sensor_id, sensor);
+      }
       addEvent(ticket, `AI photo check passed, but the light sensor has not confirmed recovery: ${verification.reason}`, "verification");
       await emailStudentUpdate(ticket, "The completion photo passed, but the room sensor has not confirmed the repair. The ticket remains open.", requestBaseUrl(request));
       await persistTicket(ticket);

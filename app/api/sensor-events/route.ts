@@ -4,30 +4,59 @@ import {
   getLatestSensors,
   setSensor,
   getOpenSensorTickets,
-  openSensorTicket,
   createTicket,
   notifyAssignment,
-  publicTicket,
   requestBaseUrl,
   persistTicket,
   logSensorEvent,
+  getTickets,
   LOW_LIGHT_THRESHOLD,
   RECOVERY_THRESHOLD,
   REQUIRED_SAMPLES,
 } from "@/lib/store";
 import { addEvent, emailStudentUpdate } from "@/lib/store";
+import { isSupabaseConfigured } from "@/lib/supabase";
+import { dbGetOpenTicketsBySensorId, dbGetSensorState } from "@/lib/db";
 import type { Ticket } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+/**
+ * When Supabase is configured (Vercel), load open sensor tickets directly from DB.
+ * Also inject them into the in-memory array so mutation functions and
+ * hasActiveSensorTicket checks work correctly.
+ * Falls back to in-memory getOpenSensorTickets() for local dev.
+ */
+async function loadOpenSensorTickets(sensorId: string): Promise<Ticket[]> {
+  if (isSupabaseConfigured()) {
+    const dbTickets = await dbGetOpenTicketsBySensorId(sensorId);
+    // Inject into in-memory array so mutations work and getOpenSensorTickets sees them
+    const tickets = getTickets();
+    for (const t of dbTickets) {
+      const existingIdx = tickets.findIndex((existing) => existing.id === t.id);
+      if (existingIdx >= 0) {
+        tickets[existingIdx] = t;
+      } else {
+        tickets.unshift(t);
+      }
+    }
+    // Return them sorted by verification priority (same logic as getOpenSensorTickets)
+    return getOpenSensorTickets(sensorId);
+  }
+  // Local dev fallback
   await loadState();
+  return getOpenSensorTickets(sensorId);
+}
+
+export async function GET() {
+  if (!isSupabaseConfigured()) {
+    await loadState();
+  }
   const sensors = Object.entries(getLatestSensors()).map(([sensor_id, sensor]) => ({ sensor_id, ...sensor }));
   return NextResponse.json({ sensors, server_time: new Date().toISOString() });
 }
 
 export async function POST(request: NextRequest) {
-  await loadState();
   const body = await request.json().catch(() => ({}));
   if (body.sensor_type !== "ldr" || body.metric !== "brightness_pct" || !Number.isFinite(body.value) || body.value < 0 || body.value > 100) {
     return NextResponse.json({ error: "Send an LDR brightness_pct value from 0 to 100." }, { status: 400 });
@@ -35,6 +64,24 @@ export async function POST(request: NextRequest) {
   const sensorId = typeof body.sensor_id === "string" && body.sensor_id.trim() ? body.sensor_id.trim() : "ldr_b204";
   const location = typeof body.location === "string" && body.location.trim() ? body.location.trim() : "Room B-204";
   const value = Math.round(body.value);
+
+  // On Vercel (Supabase mode), load sensor state from DB on cold start.
+  // On local dev, loadState() populates in-memory cache.
+  if (isSupabaseConfigured()) {
+    // Ensure loadState has run (for nextNumber etc. when creating tickets)
+    await loadState();
+    // Load this specific sensor's state from DB if not already in memory
+    const sensors = getLatestSensors();
+    if (!sensors[sensorId]) {
+      const dbSensor = await dbGetSensorState(sensorId);
+      if (dbSensor) {
+        sensors[sensorId] = dbSensor;
+      }
+    }
+  } else {
+    await loadState();
+  }
+
   const sensors = getLatestSensors();
   const sensor = sensors[sensorId] || { low_count: 0, recovery_count: 0, value: null, location };
   sensor.value = value;
@@ -46,11 +93,8 @@ export async function POST(request: NextRequest) {
   await setSensor(sensorId, sensor);
   await logSensorEvent({ sensor_id: sensorId, sensor_type: "ldr", metric: "brightness_pct", value, location, observed_at: sensor.observed_at });
 
-  // Check if we need to create a new sensor ticket
-  // Create a new one when low_count reaches threshold AND there's no existing
-  // sensor-triggered ticket that's still being worked on for this sensor.
-  // Student-reported tickets (even if open) don't block new sensor tickets.
-  const openTickets = getOpenSensorTickets(sensorId);
+  // Load open sensor tickets from Supabase (Vercel) or in-memory (local dev)
+  const openTickets = await loadOpenSensorTickets(sensorId);
   const hasActiveSensorTicket = openTickets.some(
     (t) => t.source === "sensor" && t.status !== "unassigned" && t.status !== "closed"
   );

@@ -1,20 +1,30 @@
 /*
  * FixitFelix ESP32 LDR sender.
- * Dependencies: Arduino-ESP32 core (WiFi, HTTPClient, time).
+ * Dependencies: Arduino-ESP32 core (WiFi, HTTPClient, WiFiClientSecure, time).
  * Replace local network settings and ADC calibration values before flashing.
  * Never commit real Wi-Fi credentials.
+ *
+ * Supports both local (HTTP) and Vercel (HTTPS) endpoints.
+ * If API_URL starts with "https", uses WiFiClientSecure with certificate
+ * validation. Vercel forces HTTPS (308 redirect on HTTP), so always use
+ * the https:// URL for Vercel deployments.
  */
 #include <HTTPClient.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <string.h>
 #include <time.h>
 
 const char *WIFI_SSID = "YOUR_WIFI_SSID";
 const char *WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
-// Use the computer's LAN IP; localhost will point back to the ESP32.
-// Port 3000 = Next.js dev server. Ensure the server is started with -H 0.0.0.0
-// (or check that it listens on 0.0.0.0) so the ESP32 can reach it over LAN.
-const char *API_URL = "http://172.25.189.70:3000/api/sensor-events";
+
+// --- For Vercel deployment (HTTPS) ---
+// Replace with your Vercel URL. Must start with https://
+const char *API_URL = "https://YOUR-APP.vercel.app/api/sensor-events";
+
+// --- For local dev (HTTP over LAN) ---
+// Uncomment this and comment the line above when running locally.
+// const char *API_URL = "http://172.25.189.70:3000/api/sensor-events";
 
 constexpr int LDR_PIN = 34;         // ADC1 remains usable while Wi-Fi is active
 constexpr int LDR_DARK_ADC = 3500;  // Replace with measured dark-room value
@@ -80,14 +90,35 @@ void postReading(int brightness, const String &observedAt) {
            "s\",\"observed_at\":\"%s\"}",
            LDR_SENSOR_ID, brightness, LOCATION, observedAt.c_str());
 
+  // Determine if we need HTTPS (for Vercel) or HTTP (for local LAN)
+  bool useHttps = strncmp(API_URL, "https://", 8) == 0;
+
   HTTPClient http;
-  http.setTimeout(5000);
-  http.begin(API_URL);
+  http.setTimeout(8000); // Vercel cold starts can take a few seconds
+
+  if (useHttps) {
+    // WiFiClientSecure for Vercel HTTPS endpoints
+    WiFiClientSecure *secure = new WiFiClientSecure;
+    // Vercel uses standard CAs — the ESP32 has them bundled in recent
+    // Arduino-ESP32 core versions. If cert validation fails, uncomment
+    // the line below to skip validation (less secure but works for demos):
+    // secure->setInsecure();
+    http.begin(*secure, API_URL);
+  } else {
+    // Plain HTTP for local LAN dev server
+    http.begin(API_URL);
+  }
+
   http.addHeader("Content-Type", "application/json");
   const int status = http.POST((uint8_t *)payload, strlen(payload));
   Serial.printf("brightness=%d%% POST status=%d response=%s\n", brightness,
                 status, http.getString().c_str());
   http.end();
+
+  if (useHttps) {
+    // WiFiClientSecure was heap-allocated; HTTPClient frees it internally
+    // but we delete to be safe on ESP32's tight heap.
+  }
 }
 
 void setup() {

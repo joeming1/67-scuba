@@ -336,7 +336,9 @@ export function getDataFile(): string {
  * - JSON file: loads from demo/data/tickets.json (fallback)
  */
 export async function loadState(): Promise<void> {
-  if (loaded) return;
+  // On Vercel serverless, always reload from Supabase to avoid stale in-memory cache.
+  // In local dev, cache after first load for performance.
+  if (loaded && !isVercel) return;
   loaded = true;
 
   if (useSupabase()) {
@@ -349,7 +351,7 @@ export async function loadState(): Promise<void> {
       return;
     } catch (err) {
       console.error("[store] Failed to load from Supabase, falling back to JSON file:", err);
-      loaded = false; // allow retry on next call
+      if (!isVercel) loaded = false; // allow retry on next call in local dev
     }
   }
 

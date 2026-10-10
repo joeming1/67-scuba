@@ -337,6 +337,44 @@ export async function dbGetTicketBySensorId(sensorId: string): Promise<Ticket | 
   return rowToTicket(row as TicketRow, events || []);
 }
 
+/**
+ * Get ALL non-closed tickets linked to a sensor, for batch processing
+ * sensor readings against every linked ticket.
+ */
+export async function dbGetOpenTicketsBySensorId(sensorId: string): Promise<Ticket[]> {
+  if (!isSupabaseConfigured()) return [];
+  const sb = getSupabase();
+
+  const { data: rows, error } = await sb
+    .from("tickets")
+    .select("*")
+    .eq("sensor_id", sensorId)
+    .neq("status", "closed")
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(`Failed to fetch open tickets for sensor ${sensorId}: ${error.message}`);
+  if (!rows || rows.length === 0) return [];
+
+  // Fetch all timeline events for these tickets in one query
+  const ticketIds = rows.map((r) => r.id);
+  const { data: events, error: evtError } = await sb
+    .from("timeline_events")
+    .select("*")
+    .in("ticket_id", ticketIds)
+    .order("created_at", { ascending: false });
+
+  if (evtError) console.error(`[supabase] Failed to fetch timeline for sensor ${sensorId}:`, evtError.message);
+
+  // Group events by ticket_id
+  const eventsByTicket: Record<string, TimelineEventRow[]> = {};
+  for (const e of events || []) {
+    if (!eventsByTicket[e.ticket_id]) eventsByTicket[e.ticket_id] = [];
+    eventsByTicket[e.ticket_id].push(e);
+  }
+
+  return rows.map((row) => rowToTicket(row as TicketRow, eventsByTicket[row.id] || []));
+}
+
 // ─── Sensor state operations ─────────────────────────────────────
 
 export async function dbUpsertSensorState(sensorId: string, state: SensorState): Promise<void> {
@@ -369,6 +407,24 @@ export async function dbGetAllSensorStates(): Promise<Record<string, SensorState
     result[row.sensor_id] = rowToSensorState(row as SensorStateRow);
   }
   return result;
+}
+
+export async function dbGetSensorState(sensorId: string): Promise<SensorState | null> {
+  if (!isSupabaseConfigured()) return null;
+  const sb = getSupabase();
+
+  const { data: row, error } = await sb
+    .from("sensor_states")
+    .select("*")
+    .eq("sensor_id", sensorId)
+    .maybeSingle();
+
+  if (error) {
+    console.error(`[supabase] Failed to fetch sensor state ${sensorId}:`, error.message);
+    return null;
+  }
+  if (!row) return null;
+  return rowToSensorState(row as SensorStateRow);
 }
 
 export async function dbInsertSensorEvent(event: {

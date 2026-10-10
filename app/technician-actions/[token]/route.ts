@@ -7,9 +7,40 @@ import {
   emailStudentUpdate,
   escapeHtml,
   requestBaseUrl,
+  getTickets,
 } from "@/lib/store";
+import { isSupabaseConfigured } from "@/lib/supabase";
+import { dbGetTicketByToken } from "@/lib/db";
+import type { Ticket } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * When Supabase is configured (Vercel), load the ticket directly from DB by token.
+ * Also inject it into the in-memory array so mutation functions like
+ * applyAssignmentResponse() work correctly, and persistTicket() saves it back.
+ * Returns undefined when the ticket is not found or not in "assigned" state.
+ */
+async function loadActionTicketByToken(token: string): Promise<Ticket | undefined> {
+  if (isSupabaseConfigured()) {
+    const ticket = await dbGetTicketByToken(token, "technician_action_token");
+    if (!ticket) return undefined;
+    // Only return tickets that are awaiting a technician action
+    if (ticket.status !== "assigned" || ticket.assignment?.response !== "pending") return undefined;
+    // Inject into in-memory array so mutation functions find it
+    const tickets = getTickets();
+    const existingIdx = tickets.findIndex((t) => t.id === ticket.id);
+    if (existingIdx >= 0) {
+      tickets[existingIdx] = ticket;
+    } else {
+      tickets.unshift(ticket);
+    }
+    return ticket;
+  }
+  // Local dev fallback — use in-memory lookup
+  await loadState();
+  return findTechnicianActionTicket(token);
+}
 
 function technicianActionPage({ ticket = null, token, choice, message = "", status = 200, success = false, scheduledAt = "" }: {
   ticket?: any;
@@ -41,7 +72,6 @@ function technicianActionPage({ ticket = null, token, choice, message = "", stat
 }
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
-  await loadState();
   const { token } = await params;
   const url = new URL(request.url);
   const choice = url.searchParams.get("choice");
@@ -49,17 +79,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const page = technicianActionPage({ token, choice: "accept", message: "This link is missing its action. Return to the assignment email and open Accept or Decline.", status: 400 });
     return new NextResponse(page.html, { status: page.status, headers: { "content-type": "text/html; charset=utf-8" } });
   }
-  const ticket = findTechnicianActionTicket(token);
+  const ticket = await loadActionTicketByToken(token);
   const page = technicianActionPage({ ticket, token, choice, status: ticket ? 200 : 410 });
   return new NextResponse(page.html, { status: page.status, headers: { "content-type": "text/html; charset=utf-8" } });
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
-  await loadState();
   const { token } = await params;
   const formData = await request.formData();
   const action = formData.get("action") as string;
-  const ticket = findTechnicianActionTicket(token);
+  const ticket = await loadActionTicketByToken(token);
   if (!ticket) {
     const page = technicianActionPage({ token, choice: action === "decline" ? "decline" : "accept", status: 410 });
     return new NextResponse(page.html, { status: page.status, headers: { "content-type": "text/html; charset=utf-8" } });
