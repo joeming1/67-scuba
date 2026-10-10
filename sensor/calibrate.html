@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FixFlow LDR calibration helper</title>
+  <style>
+    :root { font: 16px/1.5 system-ui, sans-serif; color: #172033; background: #f4f7fb; }
+    body { max-width: 720px; margin: 7vh auto; padding: 24px; }
+    main { background: #fff; border: 1px solid #dce3ed; border-radius: 16px; padding: 28px; box-shadow: 0 8px 28px #17203310; }
+    h1 { margin: 0; font-size: 1.5rem; } p { color: #526078; }
+    label { display: block; margin: 18px 0 6px; font-weight: 600; }
+    input { box-sizing: border-box; width: 100%; padding: 10px; border: 1px solid #bbc6d5; border-radius: 7px; font: inherit; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .result { margin-top: 20px; padding: 16px; border-radius: 9px; background: #eff6ff; }
+    .error { color: #a22; } code, pre { font-family: ui-monospace, monospace; }
+    pre { overflow: auto; padding: 14px; border-radius: 8px; background: #101827; color: #e6edf7; }
+    @media (max-width: 560px) { .grid { grid-template-columns: 1fr; gap: 0; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>FixFlow LDR calibration</h1>
+  <p>Enter representative raw ADC readings captured from the ESP32 in the demo room. The helper generates the matching firmware constants and previews the 0–100% mapping. It does not connect to the board.</p>
+  <div class="grid">
+    <div><label for="dark">Dark-room ADC reading</label><input id="dark" type="number" min="0" max="4095" value="3500"></div>
+    <div><label for="bright">Bright-room ADC reading</label><input id="bright" type="number" min="0" max="4095" value="700"></div>
+  </div>
+  <div class="result" aria-live="polite">
+    <div id="mapping"></div>
+    <label for="raw">Try a raw ADC value: <output id="raw-value">2100</output></label>
+    <input id="raw" type="range" min="0" max="4095" value="2100">
+    <p>Normalized brightness: <strong id="normalized">50%</strong></p>
+  </div>
+  <h2>Firmware settings</h2>
+  <pre id="constants"></pre>
+  <p>Verify the sensor readings with the actual divider and room lighting. These percentages are calibrated demo values, not lux measurements.</p>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  function update() {
+    const dark = Number($("dark").value), bright = Number($("bright").value);
+    const valid = Number.isInteger(dark) && Number.isInteger(bright) && dark >= 0 && dark <= 4095 && bright >= 0 && bright <= 4095 && dark !== bright;
+    if (!valid) {
+      $("mapping").innerHTML = '<span class="error">Enter two different ADC readings from 0 to 4095.</span>';
+      $("constants").textContent = "// Calibration values are not valid yet.";
+      $("normalized").textContent = "—";
+      return;
+    }
+    const invert = bright > dark;
+    const raw = Number($("raw").value);
+    const pct = invert ? (raw - dark) * 100 / (bright - dark) : (dark - raw) * 100 / (dark - bright);
+    $("raw-value").value = raw;
+    $("normalized").textContent = `${Math.max(0, Math.min(100, Math.round(pct)))}%`;
+    $("mapping").textContent = `Bright ADC is ${bright > dark ? "higher" : "lower"} than dark ADC; ${invert ? "enable" : "disable"} inversion.`;
+    $("constants").textContent = `constexpr int LDR_DARK_ADC = ${dark};\nconstexpr int LDR_BRIGHT_ADC = ${bright};\nconstexpr bool INVERT_ADC = ${invert ? "true" : "false"};`;
+  }
+  ["dark", "bright", "raw"].forEach((id) => $(id).addEventListener("input", update));
+  update();
+</script>
+</body>
+</html>

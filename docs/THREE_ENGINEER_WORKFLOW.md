@@ -13,6 +13,7 @@ flowchart LR
     subgraph Inputs[Incident inputs]
         Student[Student QR / short text form]
         LDR[ESP32 + LDR]
+        DHT[DHT11 temperature + humidity]
         Sim[Sensor simulator fallback]
     end
 
@@ -28,6 +29,7 @@ flowchart LR
 
     Student -->|POST report| API
     LDR -->|HTTP sensor reading| API
+    DHT -->|HTTP telemetry| API
     Sim -->|same sensor JSON| API
     Web <-->|read ticket / submit action| API
     API <--> DB
@@ -41,6 +43,8 @@ flowchart LR
 ```
 
 Use the existing demo contract for JSON fields and thresholds. Keep the MCP server as a separate process so WorkBuddy can connect to it; its tools should call the app API rather than write around the agreed validation rules. For a local hackathon setup, WorkBuddy's connector guidance allows local MCP processes over stdio. If the team instead uses a remote MCP server, it needs an HTTPS endpoint and a supported transport. [WorkBuddy Connector guide](https://open.workbuddy.cn/en/docs/connector)
+
+The repository now contains a local Next.js API adapter and an MCP stdio server. Its store is process-local memory for single-process rehearsals; replace it with Supabase before relying on persistence or multiple app instances.
 
 ## Team ownership
 
@@ -78,9 +82,10 @@ The work-order tool input should match this shape (the MCP server assigns the te
 - Add a clear “pending WorkBuddy triage” state so the audience can see what the agent still needs to do.
 - Keep the sensor panel as a mountable component; Engineer 3 supplies it.
 
-### Engineer 3 — LDR, simulator, and demo integration
+### Engineer 3 — LDR, DHT11, simulator, and demo integration
 
 - Calibrate the real LDR and normalize its readings to the agreed `brightness_pct` range.
+- Send DHT11 `temperature_c` and `humidity_pct` events to the sensor API for dashboard telemetry; these do not trigger tickets in this demo.
 - Send readings to the sensor endpoint using the example JSON in `contracts/examples/sensor-event.request.json`.
 - Build a dashboard sensor panel and a simulator that submits the exact same payload. The simulator is the live fallback if hardware or Wi-Fi fails.
 - Coordinate with Engineer 2 on the panel interface, but avoid editing the ticket queue/detail component.

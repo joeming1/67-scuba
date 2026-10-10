@@ -8,7 +8,7 @@ This file is the agreement for the three-engineer, 24-hour demo. Tencent WorkBud
 - Secondary flow: a student enters a short free-text issue (for example, a portal login problem). WorkBuddy classifies it and proposes the department and technician through MCP.
 - WorkBuddy must perform live classification and workflow actions through the FixFlow MCP server during the demo. Do not replace WorkBuddy calls with a mocked agent response.
 - Technician notifications and follow-up messages may be represented in the ticket timeline; sending real email or messages is out of scope.
-- The DHT/air-conditioning scenario is a future extension. Do not build it before both flows above work.
+- DHT11 temperature/humidity are accepted as telemetry and displayed on the sensor dashboard. They do not create incidents or air-conditioning tickets in this demo.
 
 ## Shared conventions
 
@@ -16,7 +16,7 @@ This file is the agreement for the three-engineer, 24-hour demo. Tencent WorkBud
 - Timestamps are ISO 8601 UTC strings, for example `2026-10-10T06:30:00Z`.
 - IDs are strings. The backend may use UUIDs; examples use readable IDs.
 - Missing optional values are omitted or `null`, consistently. Do not send empty strings as missing values.
-- Sensor units are explicit. The LDR reading sent to the API is normalized to `brightness_pct` from `0` (dark) to `100` (bright); do not send raw ADC counts to ticket logic.
+- Sensor units are explicit. LDR readings use `brightness_pct` from `0` (dark) to `100` (bright); DHT11 readings use `temperature_c` (0–50 °C) and `humidity_pct` (0–100%). Do not send raw ADC counts to ticket logic.
 - Demo-only routing is a fixed local directory, not the real university helpdesk.
 
 ## Ticket shape
@@ -67,6 +67,8 @@ Request:
 
 The backend stores this as a pending intake item. WorkBuddy reads it through MCP, derives category and priority, and requests a work order. The MCP server validates the category and priority, maps the category to the approved demo directory, persists the assignment, and returns the canonical ticket object above. The UI should not ask students to select a department or technician.
 
+`GET /api/tickets` returns `{ "tickets": Ticket[] }` for the dashboard. New reports remain pending triage until WorkBuddy creates a work order.
+
 ### `POST /api/sensor-events` — sensor reading
 
 Request:
@@ -84,6 +86,42 @@ Request:
 ```
 
 The endpoint stores readings for sensor evidence. A sustained low reading creates a pending incident; later readings update evidence on the active lighting ticket, including bright readings used for recovery verification. Response: `{ "incident_id": "incident_001", "action": "created|updated|ignored" }`. A missing `incident_id` means the reading was neither a trigger nor evidence for an open ticket. Repeated low readings for the same active issue should update its evidence, not create duplicate tickets.
+
+The same endpoint also accepts DHT11 telemetry. Send one metric per event, with `sensor_type: "dht11"`, a stable sensor ID, location, and ISO timestamp. Temperature example:
+
+```json
+{
+  "sensor_id": "dht11_b204",
+  "sensor_type": "dht11",
+  "metric": "temperature_c",
+  "value": 25.0,
+  "unit": "°C",
+  "location": "Room B-204",
+  "observed_at": "2026-10-10T06:30:00Z"
+}
+```
+
+Humidity uses `metric: "humidity_pct"`, `unit: "%"`, and a value from 0 to 100. DHT11 responses use `{ "action": "recorded" }`; these events are stored and shown on the dashboard but never enter the LDR incident/repair-verification rules.
+
+### `GET /api/sensor-events` — dashboard sensor feed
+
+Returns `{ "latest_event": SensorEvent | null, "events": SensorEvent[], "pending_incidents": SensorIncident[] }`. `events` can contain LDR, DHT11 temperature, and DHT11 humidity events. The dashboard uses the newest event for each metric; only LDR brightness participates in ticket verification.
+
+### `POST /api/demo/reset` — local demo reset
+
+Clears all process-local demo readings, incidents, tickets, and consecutive-reading counters. The local demo implementation enables this route outside production. In production it is disabled unless `FIXFLOW_DEMO_RESET_TOKEN` is configured and the caller supplies it as a bearer token. Reset is a demo operator action and must not be exposed as an unauthenticated production operation.
+
+## Internal workflow API
+
+The local MCP server calls these app routes; the UI should continue to use only the public request shapes above:
+
+- `GET /api/incidents/pending` returns `{ "incidents": Incident[] }`.
+- `GET /api/incidents/{incident_id}` returns the incident, related ticket if one exists, and recent sensor readings.
+- `POST /api/work-orders` accepts `{ "incident_id", "category", "priority", "summary", "rationale" }`. The backend validates enums, enforces `lighting` for sensor incidents, prevents duplicates, and selects the technician from the fixed placeholder directory.
+- `GET /api/sensor-readings?sensor_id={id}&since={utc_timestamp}` returns recent normalized readings.
+- `POST /api/tickets/{ticket_id}/verify` checks three post-repair readings against the recovery threshold; the caller cannot choose the resulting status.
+
+The current local implementation uses process memory to unblock integration. It is disposable demo storage and must be replaced with the planned Supabase persistence adapter before multi-instance or durable use.
 
 ### `PATCH /api/tickets/{id}/status` — technician action
 
@@ -130,7 +168,7 @@ Use these as initial demo values and calibrate against the actual board and room
 
 | Parameter | Initial value | Meaning |
 |---|---:|---|
-| `LDR_SAMPLE_INTERVAL_MS` | `1000` | Read the sensor once per second. |
+| `LDR_SAMPLE_INTERVAL_MS` | `2000` | Read LDR and DHT11 sensors every two seconds. |
 | `LDR_LOW_LIGHT_THRESHOLD_PCT` | `25` | Below this is considered too dark. |
 | `LDR_RECOVERY_THRESHOLD_PCT` | `40` | At or above this is considered bright enough; the gap prevents flickering around one threshold. |
 | `LDR_REQUIRED_CONSECUTIVE_SAMPLES` | `3` | Require three qualifying readings before creating or verifying a ticket. |
@@ -152,5 +190,5 @@ For this demo, a low-confidence or unmatched student report goes to `other`; do 
 
 - **Engineer 1 — WorkBuddy and workflow backend:** implements the MCP server and tools, pending-incident store, routing directory, duplicate handling, allowed state transitions, verification, and audit timeline. WorkBuddy makes the triage decision; this engineer makes tool actions safe and persistent.
 - **Engineer 2 — student and technician web UI:** builds the free-text intake, ticket queue and detail view, technician actions, and event timeline using only the API contract above.
-- **Engineer 3 — IoT and demo integration:** calibrates the LDR, sends normalized readings to the sensor endpoint, builds a sensor simulator fallback, and owns the sensor panel and end-to-end demo reset/runbook. The sensor panel should be a separate component that Engineer 2 can place in the dashboard.
+- **Engineer 3 — IoT and demo integration:** calibrates the LDR, sends LDR and DHT11 readings to the sensor endpoint, builds a sensor simulator fallback, and owns the sensor panel and end-to-end demo reset/runbook. DHT11 values are telemetry-only for this demo. The sensor panel should be a separate component that Engineer 2 can place in the dashboard.
 - All three agree before changing fields or statuses. Engineer 1 owns the MCP/API contract; Engineer 2 and Engineer 3 consume it. If a field or status needs to change, update this contract first and tell the others.

@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "fixflow-demo": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["tsx", "<ABSOLUTE_REPOSITORY_PATH>/mcp/server.ts"],
+      "env": {
+        "FIXFLOW_API_BASE_URL": "http://localhost:3000"
+      },
+      "runtime": { "type": "node", "version": "20" },
+      "timeout": 30000
+    }
+  }
+}

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FixFlow Sensor Simulator</title>
+  <style>
+    :root { font: 16px/1.5 system-ui, sans-serif; color: #172033; background: #f4f7fb; }
+    body { max-width: 620px; margin: 8vh auto; padding: 24px; }
+    main { background: white; border: 1px solid #dce3ed; border-radius: 16px; padding: 28px; box-shadow: 0 8px 28px #17203310; }
+    h1 { margin-top: 0; font-size: 1.5rem; } label { display: block; margin: 18px 0 6px; font-weight: 600; }
+    input { box-sizing: border-box; width: 100%; padding: 10px; border: 1px solid #bbc6d5; border-radius: 7px; }
+    input[type=range] { padding: 0; } output { font-variant-numeric: tabular-nums; }
+    button { margin: 14px 8px 0 0; padding: 10px 14px; border: 0; border-radius: 7px; background: #174ea6; color: white; font-weight: 600; cursor: pointer; }
+    button.secondary { background: #e7edf6; color: #172033; } button:disabled { opacity: .55; cursor: wait; }
+    button.danger { background: #fff; border: 1px solid #c65c5c; color: #8f2626; }
+    pre { overflow: auto; padding: 14px; border-radius: 8px; background: #101827; color: #e6edf7; font-size: .8rem; }
+    #status { min-height: 1.5em; color: #34445d; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>FixFlow sensor simulator</h1>
+  <p>Sends LDR and DHT11 sensor-event JSON to <code>/api/sensor-events</code>.</p>
+  <label for="endpoint">Sensor endpoint</label>
+  <input id="endpoint" value="/api/sensor-events" autocomplete="url">
+  <label for="sensor">Sensor ID</label>
+  <input id="sensor" value="ldr_b204">
+  <label for="location">Location</label>
+  <input id="location" value="Room B-204">
+  <label for="brightness">Brightness: <output id="value">12</output>%</label>
+  <input id="brightness" type="range" min="0" max="100" value="12">
+  <label for="temperature">Temperature (°C)</label>
+  <input id="temperature" type="number" min="0" max="50" step="0.1" value="25">
+  <label for="humidity">Humidity (%)</label>
+  <input id="humidity" type="number" min="0" max="100" step="0.1" value="60">
+  <button id="send">Send reading</button>
+  <button id="climate" class="secondary">Send temperature + humidity</button>
+  <button id="dim" class="secondary">Send 3 dim samples (12%)</button>
+  <button id="bright" class="secondary">Send 3 bright samples (60%)</button>
+  <button id="reset" class="danger">Reset demo state</button>
+  <p id="status" role="status" aria-live="polite"></p>
+  <pre id="payload"></pre>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const slider = $("brightness");
+  slider.addEventListener("input", () => { $("value").value = slider.value; preview(); });
+  function makePayload(value) {
+    return {
+      sensor_id: $("sensor").value || "ldr_b204",
+      sensor_type: "ldr",
+      metric: "brightness_pct",
+      value,
+      unit: "%",
+      location: $("location").value || "Room B-204",
+      observed_at: new Date().toISOString()
+    };
+  }
+  function preview(value = Number(slider.value)) { $("payload").textContent = JSON.stringify(makePayload(value), null, 2); }
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  async function send(value, count = 1) {
+    const buttons = [$("send"), $("climate"), $("dim"), $("bright"), $("reset")]; buttons.forEach((button) => button.disabled = true);
+    try {
+      for (let index = 0; index < count; index++) {
+        if (index > 0) await sleep(1000);
+        const payload = makePayload(value); preview(value);
+        $("status").textContent = `Sending sample ${index + 1} of ${count}…`;
+        const response = await fetch($("endpoint").value, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+        });
+        const body = await response.text();
+        if (!response.ok) throw new Error(`HTTP ${response.status}: ${body || response.statusText}`);
+        $("status").textContent = `Accepted sample ${index + 1} of ${count}: ${body || "HTTP " + response.status}`;
+      }
+      $("status").textContent = `Accepted ${count} sample${count === 1 ? "" : "s"} at 1-second intervals.`;
+    } catch (error) { $("status").textContent = `Send failed: ${error.message}`; }
+    finally { buttons.forEach((button) => button.disabled = false); }
+  }
+  async function resetDemo() {
+    if (!window.confirm("Clear demo sensor readings and pending sensor incidents?")) return;
+    const buttons = [$("send"), $("climate"), $("dim"), $("bright"), $("reset")]; buttons.forEach((button) => button.disabled = true);
+    try {
+      const response = await fetch("/api/demo/reset", { method: "POST" });
+      const body = await response.text();
+      if (!response.ok) throw new Error(`HTTP ${response.status}: ${body || response.statusText}`);
+      $("status").textContent = `Demo state reset: ${body}`;
+    } catch (error) { $("status").textContent = `Reset failed: ${error.message}`; }
+    finally { buttons.forEach((button) => button.disabled = false); }
+  }
+  async function sendClimate() {
+    const buttons = [$("send"), $("climate"), $("dim"), $("bright"), $("reset")]; buttons.forEach((button) => button.disabled = true);
+    try {
+      for (const reading of [
+        { metric: "temperature_c", value: Number($("temperature").value), unit: "°C" },
+        { metric: "humidity_pct", value: Number($("humidity").value), unit: "%" }
+      ]) {
+        if (!Number.isFinite(reading.value)) throw new Error("Enter a valid temperature and humidity.");
+        const payload = { sensor_id: "dht11_b204", sensor_type: "dht11", ...reading, location: $("location").value || "Room B-204", observed_at: new Date().toISOString() };
+        $("payload").textContent = JSON.stringify(payload, null, 2);
+        const response = await fetch($("endpoint").value, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+        const body = await response.text();
+        if (!response.ok) throw new Error(`HTTP ${response.status}: ${body || response.statusText}`);
+      }
+      $("status").textContent = "Accepted temperature and humidity readings.";
+    } catch (error) { $("status").textContent = `Send failed: ${error.message}`; }
+    finally { buttons.forEach((button) => button.disabled = false); }
+  }
+  $("send").addEventListener("click", () => send(Number(slider.value)));
+  $("climate").addEventListener("click", sendClimate);
+  $("dim").addEventListener("click", () => { slider.value = 12; $("value").value = 12; send(12, 3); });
+  $("bright").addEventListener("click", () => { slider.value = 60; $("value").value = 60; send(60, 3); });
+  $("reset").addEventListener("click", resetDemo);
+  preview();
+</script>
+</body>
+</html>
