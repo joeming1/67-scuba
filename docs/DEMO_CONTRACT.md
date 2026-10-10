@@ -1,11 +1,12 @@
 # FixFlow Demo Contract
 
-This file is the agreement between the two engineers for the 24-hour demo. The backend owns classification, assignment, duplicate detection, ticket state, and sensor verification. The frontend submits inputs and renders the ticket returned by the backend; it must not invent its own status or assignment values.
+This file is the agreement for the three-engineer, 24-hour demo. Tencent WorkBuddy is the workflow agent: it reads pending incidents, classifies and prioritizes them, and chooses the next action using FixFlow MCP tools. The backend/MCP server owns persistence, the approved routing directory, duplicate prevention, valid state transitions, and sensor verification. The frontend submits inputs and renders canonical records; it must not invent statuses or assignments.
 
 ## Demo scope
 
-- Primary flow: an LDR detects a room that is too dark, automatically creates and routes a lighting ticket, and verifies the repair from later sensor readings.
-- Secondary flow: a student enters a short free-text issue (for example, a portal login problem). The backend classifies it and fills in the category, department, and technician.
+- Primary flow: an LDR detects a room that is too dark and records a pending incident. WorkBuddy processes it through MCP, routes a lighting work order, and verifies the repair from later sensor readings.
+- Secondary flow: a student enters a short free-text issue (for example, a portal login problem). WorkBuddy classifies it and proposes the department and technician through MCP.
+- WorkBuddy must perform live classification and workflow actions through the FixFlow MCP server during the demo. Do not replace WorkBuddy calls with a mocked agent response.
 - Technician notifications and follow-up messages may be represented in the ticket timeline; sending real email or messages is out of scope.
 - The DHT/air-conditioning scenario is a future extension. Do not build it before both flows above work.
 
@@ -64,7 +65,7 @@ Request:
 }
 ```
 
-The backend derives category, priority, and assignment. The response is the canonical ticket object above. The UI should not ask students to select a department or technician.
+The backend stores this as a pending intake item. WorkBuddy reads it through MCP, derives category and priority, and requests a work order. The MCP server validates the category and priority, maps the category to the approved demo directory, persists the assignment, and returns the canonical ticket object above. The UI should not ask students to select a department or technician.
 
 ### `POST /api/sensor-events` — sensor reading
 
@@ -82,7 +83,7 @@ Request:
 }
 ```
 
-Response: `{ "ticket": <canonical ticket or null>, "action": "created|updated|ignored" }`. `null` means the reading did not meet the trigger condition. Repeated readings for the same active issue should update its evidence, not create duplicate tickets.
+The endpoint stores readings for sensor evidence. A sustained low reading creates a pending incident; later readings update evidence on the active lighting ticket, including bright readings used for recovery verification. Response: `{ "incident_id": "incident_001", "action": "created|updated|ignored" }`. A missing `incident_id` means the reading was neither a trigger nor evidence for an open ticket. Repeated low readings for the same active issue should update its evidence, not create duplicate tickets.
 
 ### `PATCH /api/tickets/{id}/status` — technician action
 
@@ -108,6 +109,20 @@ new -> assigned -> in_progress -> verification_pending -> closed
 - Technician actions move a ticket to `in_progress` and then `verification_pending`.
 - Failed verification moves it to `follow_up`; a successful check moves it to `closed`.
 - Every transition and sensor check should appear in the incident timeline, even if notifications are simulated.
+
+## WorkBuddy MCP contract
+
+WorkBuddy is the agent used during the demo. It calls the FixFlow MCP server to read incident context and request workflow actions; the server validates and records those actions. The initial tool set is:
+
+| Tool | Purpose |
+|---|---|
+| `list_pending_incidents` | Return student reports and sensor incidents that have not been triaged. |
+| `get_incident_context` | Return the incident, related open tickets, and recent sensor readings. |
+| `create_work_order` | Accept WorkBuddy's category, priority, summary, and rationale; validate them and map the category through the fixed demo routing table. |
+| `get_sensor_readings` | Return recent normalized readings for a sensor linked to an open ticket. |
+| `verify_and_update_ticket` | Check the server-side repair evidence and move the ticket to `closed` or `follow_up`; WorkBuddy cannot force closure. |
+
+For the 24-hour demo, a person can start processing by prompting WorkBuddy. Sensor events enter the pending queue automatically, but do not claim that a sensor webhook starts a WorkBuddy run unless that trigger is confirmed in the chosen WorkBuddy setup.
 
 ## LDR demo parameters
 
@@ -135,6 +150,7 @@ For this demo, a low-confidence or unmatched student report goes to `other`; do 
 
 ## Engineer ownership
 
-- **Backend engineer:** implements these request/response shapes, classification and routing, duplicate handling, state transitions, verification, and the event timeline.
-- **Frontend engineer:** builds the student text-entry form, ticket dashboard, technician actions, sensor display/simulator, and timeline using only the API contract above.
-- If a field or status needs to change, update this contract first and tell the other engineer before changing implementation.
+- **Engineer 1 — WorkBuddy and workflow backend:** implements the MCP server and tools, pending-incident store, routing directory, duplicate handling, allowed state transitions, verification, and audit timeline. WorkBuddy makes the triage decision; this engineer makes tool actions safe and persistent.
+- **Engineer 2 — student and technician web UI:** builds the free-text intake, ticket queue and detail view, technician actions, and event timeline using only the API contract above.
+- **Engineer 3 — IoT and demo integration:** calibrates the LDR, sends normalized readings to the sensor endpoint, builds a sensor simulator fallback, and owns the sensor panel and end-to-end demo reset/runbook. The sensor panel should be a separate component that Engineer 2 can place in the dashboard.
+- All three agree before changing fields or statuses. Engineer 1 owns the MCP/API contract; Engineer 2 and Engineer 3 consume it. If a field or status needs to change, update this contract first and tell the others.
