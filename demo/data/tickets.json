@@ -1,236 +1,14 @@
 {
-  "next_number": 6,
+  "next_number": 2,
   "tickets": [
-    {
-      "id": "FX-0005",
-      "source": "student_report",
-      "summary": "fix the lghtihtht",
-      "description": "fix the lghtihtht",
-      "category": "other",
-      "priority": "medium",
-      "location": "room 69",
-      "student_email": "laijoeming@gmail.com",
-      "status": "unassigned",
-      "assignment": null,
-      "declined_technician_ids": [],
-      "scheduled_at": null,
-      "notification": null,
-      "technician_action_token": null,
-      "student_tracking_token": "SXuQa-BZ9Ufp9W1LyKqMOcDLiRgREK6O",
-      "completion_verification": null,
-      "sensor_id": null,
-      "verification": null,
-      "timeline": [
-        {
-          "id": "a76d491e-08c9-48be-a1e5-08b17d096f68",
-          "type": "created",
-          "message": "Student report received and categorized as other.",
-          "created_at": "2026-10-10T18:27:06.333Z"
-        }
-      ],
-      "created_at": "2026-10-10T18:27:06.333Z",
-      "updated_at": "2026-10-10T18:27:06.333Z",
-      "email_update": {
-        "channel": "email",
-        "recipient": "laijoeming@gmail.com",
-        "status": "sent",
-        "updated_at": "2026-10-10T18:27:07.171Z",
-        "provider_id": "01a12711-989d-72cd-bdff-4d4472671bea"
-      }
-    },
-    {
-      "id": "FX-0004",
-      "source": "student_report",
-      "summary": "fix the lghtihtht",
-      "description": "fix the lghtihtht",
-      "category": "other",
-      "priority": "medium",
-      "location": "room 69",
-      "student_email": "laijoeming@gmail.com",
-      "status": "unassigned",
-      "assignment": null,
-      "declined_technician_ids": [],
-      "scheduled_at": null,
-      "notification": null,
-      "technician_action_token": null,
-      "student_tracking_token": "LYKEi1ZBa6lou4HbGxEl7p0_kyS_qnQq",
-      "completion_verification": null,
-      "sensor_id": null,
-      "verification": null,
-      "timeline": [
-        {
-          "id": "2b810125-0851-4fa8-9dab-a4b95fe8eef5",
-          "type": "created",
-          "message": "Student report received and categorized as other.",
-          "created_at": "2026-10-10T18:26:10.605Z"
-        }
-      ],
-      "created_at": "2026-10-10T18:26:10.605Z",
-      "updated_at": "2026-10-10T18:26:10.605Z",
-      "email_update": {
-        "channel": "email",
-        "recipient": "laijoeming@gmail.com",
-        "status": "sent",
-        "updated_at": "2026-10-10T18:26:11.303Z",
-        "provider_id": "01a12710-be81-7245-b7ba-27e23ad5e552"
-      }
-    },
-    {
-      "id": "FX-0003",
-      "source": "student_report",
-      "summary": "fix lighting",
-      "description": "fix lighting",
-      "category": "lighting",
-      "priority": "medium",
-      "location": "room 69",
-      "student_email": "laijoeming@gmail.com",
-      "status": "assigned",
-      "assignment": {
-        "department_id": "facilities_electrical",
-        "department_name": "Facilities - Electrical",
-        "technician_id": "tech_04",
-        "technician_name": "Amir Hassan",
-        "response": "pending"
-      },
-      "declined_technician_ids": [],
-      "scheduled_at": null,
-      "notification": {
-        "channel": "email",
-        "recipient": "laijoeming@gmail.com",
-        "status": "sent",
-        "updated_at": "2026-10-10T18:22:02.775Z",
-        "provider_id": "01a1270c-f606-744f-bb78-8ca7f0e2e719"
-      },
-      "technician_action_token": "QGvmd-qWRqSpXT5lb6keVrJbwC6XdzTDqEPfIDEbAS8",
-      "student_tracking_token": "1kzkGj-kGGX9OnysOLZqByEe2iQy0Cfm",
-      "completion_verification": null,
-      "sensor_id": null,
-      "verification": null,
-      "timeline": [
-        {
-          "id": "d1945433-b2e7-4e31-aabd-e340312b165c",
-          "type": "notification",
-          "message": "Email assignment with technician response links sent to laijoeming@gmail.com.",
-          "created_at": "2026-10-10T18:22:03.365Z"
-        },
-        {
-          "id": "bacfff27-e91f-477b-bc0f-a6456e46255b",
-          "type": "assigned",
-          "message": "Assigned to Amir Hassan in Facilities - Electrical; awaiting response.",
-          "created_at": "2026-10-10T18:22:02.774Z"
-        },
-        {
-          "id": "3ce4176f-8a2e-4bd7-95a5-117dfe362a03",
-          "type": "created",
-          "message": "Student report received and categorized as lighting.",
-          "created_at": "2026-10-10T18:22:02.774Z"
-        }
-      ],
-      "created_at": "2026-10-10T18:22:02.773Z",
-      "updated_at": "2026-10-10T18:22:03.365Z",
-      "email_update": {
-        "channel": "email",
-        "recipient": "laijoeming@gmail.com",
-        "status": "sent",
-        "updated_at": "2026-10-10T18:22:03.859Z",
-        "provider_id": "01a1270c-f7c2-706e-8437-bfc4070e2ddd"
-      }
-    },
-    {
-      "id": "FX-0002",
-      "source": "student_report",
-      "summary": "test",
-      "description": "test",
-      "category": "other",
-      "priority": "medium",
-      "location": "test",
-      "student_email": "test@test.com",
-      "status": "in_progress",
-      "assignment": {
-        "department_id": "helpdesk_triage",
-        "department_name": "Helpdesk Triage",
-        "technician_id": "tech_00",
-        "technician_name": "Helpdesk Team",
-        "response": "accepted"
-      },
-      "declined_technician_ids": [],
-      "scheduled_at": "2026-10-11T18:22:00.000Z",
-      "notification": {
-        "channel": "email",
-        "recipient": "laijoeming@gmail.com",
-        "status": "sent",
-        "updated_at": "2026-10-10T18:21:43.031Z",
-        "provider_id": "01a1270c-a9de-7a58-a44f-a13f45963a13"
-      },
-      "technician_action_token": "ucTL7ZcrDztUGgFKkEx9UrEHsUrqiTr7b7Cxq21LpvM",
-      "student_tracking_token": "gSn_oUjDFiOHn5KPK9ypgHEH8yYiS9u5",
-      "completion_verification": {
-        "state": "failed",
-        "fixed": false,
-        "confidence": 0.1,
-        "reason": "The issue description is a placeholder ('test'), making it impossible to determine what was broken or verify if it is resolved.",
-        "model": "gemini-3.8-flash",
-        "photo_url": "/evidence/fx-0002-29c85e95-a5ca-41b2-b6a1-4669e771e77c.jpg",
-        "checked_at": "2026-10-10T18:23:14.143Z"
-      },
-      "sensor_id": null,
-      "verification": null,
-      "timeline": [
-        {
-          "id": "d8567f27-8fb2-4219-9d6a-4d2fce0ff142",
-          "type": "verification_failed",
-          "message": "AI photo check did not confirm completion (10% confidence): The issue description is a placeholder ('test'), making it impossible to determine what was broken or verify if it is resolved.",
-          "created_at": "2026-10-10T18:23:14.144Z"
-        },
-        {
-          "id": "096c3c58-7646-4aa9-b4ba-f1f497e248eb",
-          "type": "work_started",
-          "message": "Helpdesk Team arrived and started work. The visit was scheduled for 10/12/2026, 2:22:00 AM.",
-          "created_at": "2026-10-10T18:22:56.043Z"
-        },
-        {
-          "id": "7e89b496-efae-4b67-96f9-7fc3f56176b7",
-          "type": "scheduled",
-          "message": "Helpdesk Team accepted and scheduled the fix for 10/12/2026, 2:22:00 AM.",
-          "created_at": "2026-10-10T18:22:49.127Z"
-        },
-        {
-          "id": "24c51988-9756-4625-83be-64017dc5ffd9",
-          "type": "notification",
-          "message": "Email assignment with technician response links sent to laijoeming@gmail.com.",
-          "created_at": "2026-10-10T18:21:43.874Z"
-        },
-        {
-          "id": "43552662-e6d6-4dc4-93da-b7005aa8ea12",
-          "type": "assigned",
-          "message": "Assigned to Helpdesk Team in Helpdesk Triage; awaiting response.",
-          "created_at": "2026-10-10T18:21:43.031Z"
-        },
-        {
-          "id": "50b0bcbe-0247-41a3-8e3a-6a55d70bd734",
-          "type": "created",
-          "message": "Student report received and categorized as other.",
-          "created_at": "2026-10-10T18:21:43.031Z"
-        }
-      ],
-      "created_at": "2026-10-10T18:21:43.029Z",
-      "updated_at": "2026-10-10T18:23:14.144Z",
-      "email_update": {
-        "channel": "email",
-        "recipient": "test@test.com",
-        "status": "failed",
-        "updated_at": "2026-10-10T18:23:14.733Z",
-        "error": "You can only send testing emails to your own email address (laijoeming@gmail.com). To send emails to other recipients, please verify a domain at resend.com/domains, and change the `from` address to an email using this domain."
-      }
-    },
     {
       "id": "FX-0001",
       "source": "student_report",
-      "summary": "The light in my study room is not working",
-      "description": "The light in my study room is not working",
+      "summary": "light is broken in room 69",
+      "description": "light is broken in room 69",
       "category": "lighting",
       "priority": "medium",
-      "location": "Room D-302",
+      "location": "Room 69",
       "student_email": "laijoeming@gmail.com",
       "status": "assigned",
       "assignment": {
@@ -246,42 +24,42 @@
         "channel": "email",
         "recipient": "laijoeming@gmail.com",
         "status": "sent",
-        "updated_at": "2026-10-10T18:17:53.024Z",
-        "provider_id": "01a12709-2726-7169-8beb-11a92820cb38"
+        "updated_at": "2026-10-10T18:30:08.455Z",
+        "provider_id": "01a12714-5fd0-7a58-b8af-381e7c19ef73"
       },
-      "technician_action_token": "Iln-kDk8tJB5tHpBdJTTYvWnDO7vAFcq3PpVBni8pbY",
-      "student_tracking_token": "4_j4SFEwAC2KCMMMrrqahWh04oTrlLJZ",
+      "technician_action_token": "fxT1wioeT9BASY6arGOdVtKEfKg0go1Ux7-pUll9nfA",
+      "student_tracking_token": "ExW-kK3Vf6HpmH7O_qFcOwWkm1gEWaqn",
       "completion_verification": null,
       "sensor_id": null,
       "verification": null,
       "timeline": [
         {
-          "id": "cbda2dc1-33a4-44ec-bd22-01979ece598c",
+          "id": "0662ec74-9453-4ce4-b71f-f92f01ccff31",
           "type": "notification",
           "message": "Email assignment with technician response links sent to laijoeming@gmail.com.",
-          "created_at": "2026-10-10T18:17:53.909Z"
+          "created_at": "2026-10-10T18:30:09.218Z"
         },
         {
-          "id": "f3c2b5de-ee62-4d14-b0c7-4c461917a9e1",
+          "id": "64acb8ec-7b7b-4343-99e6-3239d6a7833f",
           "type": "assigned",
           "message": "Assigned to Aina Rahman in Facilities - Electrical; awaiting response.",
-          "created_at": "2026-10-10T18:17:53.024Z"
+          "created_at": "2026-10-10T18:30:08.455Z"
         },
         {
-          "id": "acdbbb2a-2a26-43c9-b6f9-233ae889ca4d",
+          "id": "4d03202c-4c27-41ad-8c56-78ea5c5cc6fd",
           "type": "created",
           "message": "Student report received and categorized as lighting.",
-          "created_at": "2026-10-10T18:17:53.024Z"
+          "created_at": "2026-10-10T18:30:08.455Z"
         }
       ],
-      "created_at": "2026-10-10T18:17:53.024Z",
-      "updated_at": "2026-10-10T18:17:53.909Z",
+      "created_at": "2026-10-10T18:30:08.455Z",
+      "updated_at": "2026-10-10T18:30:09.218Z",
       "email_update": {
         "channel": "email",
         "recipient": "laijoeming@gmail.com",
         "status": "sent",
-        "updated_at": "2026-10-10T18:17:54.971Z",
-        "provider_id": "01a12709-290f-7ba5-a05a-2987049f3523"
+        "updated_at": "2026-10-10T18:30:09.635Z",
+        "provider_id": "01a12714-6172-716b-a2c6-57f2c49c1568"
       }
     }
   ]
