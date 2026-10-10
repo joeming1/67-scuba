@@ -248,32 +248,26 @@ export async function sendEmail({ to, subject, text }: { to: string; subject: st
 }
 
 /**
- * Send a dispatch prompt to Fix It Felix (Telegram bot).
- * Felix uses Gemini AI to craft a natural message and sends it to the technician via Telegram.
+ * Send a message directly via Telegram Bot API.
+ * Sends the same text content as email — just delivered through Telegram instead.
  */
-export async function sendTelegram({
-  message,
-  context,
-}: {
-  message: string;
-  context?: Record<string, unknown>;
-}) {
-  const felixUrl = process.env.FELIX_API_URL?.trim();
-  if (!felixUrl) return { status: "not_configured" as const };
-  const chatId = process.env.FELIX_TECHNICIAN_CHAT_ID?.trim() || null;
+export async function sendTelegram({ text }: { text: string }) {
+  const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
+  const chatId = process.env.TELEGRAM_CHAT_ID?.trim();
+  if (!token || !chatId) return { status: "not_configured" as const };
   try {
-    const response = await fetch(`${felixUrl.replace(/\/+$/, "")}/prompt`, {
+    const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ message, context: context || {}, chat_id: chatId }),
-      signal: AbortSignal.timeout(15000),
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
+      signal: AbortSignal.timeout(8000),
     });
     const payload = await response.json().catch(() => ({}));
-    return response.ok
-      ? { status: "sent" as const, id: payload.taskId || null, sentMessage: payload.sentMessage || null }
-      : { status: "failed" as const, error: payload.error || `Felix returned ${response.status}.` };
+    return response.ok && payload.ok
+      ? { status: "sent" as const, id: String(payload.result?.message_id || "") }
+      : { status: "failed" as const, error: payload.description || `Telegram API returned ${response.status}.` };
   } catch {
-    return { status: "failed" as const, error: "Felix (Telegram) request failed." };
+    return { status: "failed" as const, error: "Telegram API request failed." };
   }
 }
 
@@ -283,29 +277,28 @@ export async function emailStudentUpdate(ticket: Ticket, message: string, baseUr
   const emailEnabled = process.env.FIXFLOW_EMAIL_ENABLED !== "false"; // default true
   const telegramEnabled = process.env.FIXFLOW_TELEGRAM_ENABLED === "true";
 
+  // Build the same message text for both channels
+  const lines = [
+    `Update for FixFlow ticket ${ticket.id}`,
+    `Status: ${ticket.status.replaceAll("_", " ")}`,
+    message,
+    ticket.scheduled_at ? `Scheduled visit: ${new Date(ticket.scheduled_at).toLocaleString()}` : "",
+    `Track this ticket: ${origin}/student/${ticket.student_tracking_token}`,
+  ].filter(Boolean);
+  const fullText = lines.join("\n\n");
+
   const emailResult = emailEnabled
     ? await sendEmail({
         to: recipient || "",
         subject: `FixFlow update for ${ticket.id}: ${ticket.status.replaceAll("_", " ")}`,
-        text: [
-          `Update for FixFlow ticket ${ticket.id}`,
-          `Status: ${ticket.status.replaceAll("_", " ")}`,
-          message,
-          ticket.scheduled_at ? `Scheduled visit: ${new Date(ticket.scheduled_at).toLocaleString()}` : "",
-          `Track this ticket: ${origin}/student/${ticket.student_tracking_token}`,
-        ]
-          .filter(Boolean)
-          .join("\n\n"),
+        text: fullText,
       })
     : { status: "not_configured" as const };
 
-  // Also send student updates via Telegram if enabled
+  // Send the same content via Telegram if enabled
   let telegramResult = null;
   if (telegramEnabled) {
-    telegramResult = await sendTelegram({
-      message: `FixFlow update for ${ticket.id}: ${message}${ticket.scheduled_at ? ` Scheduled: ${new Date(ticket.scheduled_at).toLocaleString()}.` : ""} Track: ${origin}/student/${ticket.student_tracking_token}`,
-      context: { ticket_id: ticket.id, status: ticket.status, type: "student_update" },
-    });
+    telegramResult = await sendTelegram({ text: fullText });
   }
 
   (ticket as any).email_update = {
@@ -334,40 +327,32 @@ export async function notifyAssignment(ticket: Ticket, reason: string, baseUrl: 
   const channels: string[] = [];
   const statuses: string[] = [];
 
+  // Build the same message text for both channels
+  const lines = [
+    `FixFlow ticket ${ticket.id} assigned to ${ticket.assignment?.technician_name}.`,
+    `Issue: ${ticket.summary}`,
+    `Location: ${ticket.location}`,
+    `Department: ${ticket.assignment?.department_name}`,
+    `Reason: ${reason}`,
+    `Open your technician workspace to accept and schedule the visit, start work, record an attempt, or submit a completion photo: ${technicianUrl}`,
+  ];
+  const fullText = lines.join("\n\n");
+
   // --- Email ---
   if (emailEnabled) {
     const email = await sendEmail({
       to: emailRecipient || "",
       subject: `FixFlow assignment: ${ticket.id}`,
-      text: [
-        `FixFlow ticket ${ticket.id} assigned to ${ticket.assignment?.technician_name}.`,
-        `Issue: ${ticket.summary}`,
-        `Location: ${ticket.location}`,
-        `Department: ${ticket.assignment?.department_name}`,
-        `Reason: ${reason}`,
-        `Open your technician workspace to accept and schedule the visit, start work, record an attempt, or submit a completion photo: ${technicianUrl}`,
-      ].join("\n\n"),
+      text: fullText,
     });
     channels.push("email");
     statuses.push(`email:${email.status}`);
   }
 
-  // --- Telegram (via Fix It Felix bot) ---
+  // --- Telegram (same content, direct via Telegram Bot API) ---
   let telegramResult = null;
   if (telegramEnabled) {
-    telegramResult = await sendTelegram({
-      message: `New assignment: Ticket ${ticket.id} — ${ticket.summary}. Location: ${ticket.location}. Technician: ${ticket.assignment?.technician_name}. Department: ${ticket.assignment?.department_name}. Reason: ${reason}. Open workspace: ${technicianUrl}`,
-      context: {
-        ticket_id: ticket.id,
-        technician_id: ticket.assignment?.technician_id,
-        technician_name: ticket.assignment?.technician_name,
-        location: ticket.location,
-        summary: ticket.summary,
-        department: ticket.assignment?.department_name,
-        reason,
-        type: "assignment",
-      },
-    });
+    telegramResult = await sendTelegram({ text: fullText });
     channels.push("telegram");
     statuses.push(`telegram:${telegramResult.status}`);
   }
