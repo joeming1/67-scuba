@@ -1,6 +1,43 @@
 {
-  "next_number": 13,
+  "next_number": 14,
   "tickets": [
+    {
+      "id": "FX-0013",
+      "source": "student_report",
+      "summary": "The projector in lecture hall A is not turning on",
+      "description": "The projector in lecture hall A is not turning on",
+      "category": "other",
+      "priority": "medium",
+      "location": "Lecture Hall A",
+      "student_email": "laijoeming@gmail.com",
+      "status": "unassigned",
+      "assignment": null,
+      "declined_technician_ids": [],
+      "scheduled_at": null,
+      "notification": null,
+      "technician_action_token": null,
+      "student_tracking_token": "A-0KCDw1XUmieClZLa_pLeHU28ues-wr",
+      "completion_verification": null,
+      "sensor_id": null,
+      "verification": null,
+      "timeline": [
+        {
+          "id": "e13e158e-a9b4-4de2-8c07-55ddc40e4cf7",
+          "type": "created",
+          "message": "Student report received and categorized as other.",
+          "created_at": "2026-10-10T18:14:05.822Z"
+        }
+      ],
+      "created_at": "2026-10-10T18:14:05.821Z",
+      "updated_at": "2026-10-10T18:14:05.822Z",
+      "email_update": {
+        "channel": "email",
+        "recipient": "laijoeming@gmail.com",
+        "status": "sent",
+        "updated_at": "2026-10-10T18:14:06.560Z",
+        "provider_id": "01a12705-af61-71f0-a68a-98b75a6af152"
+      }
+    },
     {
       "id": "FX-0012",
       "source": "student_report",
