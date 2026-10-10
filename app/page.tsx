@@ -69,24 +69,31 @@ export default function Dashboard() {
 
   const selected = tickets.find((t) => t.id === id) ?? tickets[0] ?? null;
 
-  // Fetch tickets from API
-  const refreshTickets = useCallback(async () => {
+  // Fetch tickets + sensor state from API
+  const refreshAll = useCallback(async () => {
     try {
-      const res = await fetch("/api/sensor-events", { cache: "no-store" });
-      if (res.ok) {
-        const data = await res.json();
-        const s = (data.sensors || []).find((item: any) => item.sensor_id === "ldr_b204");
+      // Fetch tickets
+      const tRes = await fetch("/api/tickets", { cache: "no-store" });
+      if (tRes.ok) {
+        const tData = await tRes.json();
+        if (tData.tickets) setTickets(tData.tickets);
+      }
+      // Fetch sensor state
+      const sRes = await fetch("/api/sensor-events", { cache: "no-store" });
+      if (sRes.ok) {
+        const sData = await sRes.json();
+        const s = (sData.sensors || []).find((item: any) => item.sensor_id === "ldr_b204");
         if (s) setSensor(s);
       }
     } catch {}
   }, []);
 
-  // Poll sensor state every 1.5s
+  // Poll tickets + sensor state every 1.5s
   useEffect(() => {
-    refreshTickets();
-    const interval = setInterval(() => refreshTickets(), 1500);
+    refreshAll();
+    const interval = setInterval(() => refreshAll(), 1500);
     return () => clearInterval(interval);
-  }, [refreshTickets]);
+  }, [refreshAll]);
 
   const visible = useMemo(
     () =>
@@ -126,10 +133,12 @@ export default function Dashboard() {
       if (!r.ok) throw new Error(data.error || "Could not submit.");
       setSubmitResult({ ticketId: data.ticket.id, trackingUrl: data.tracking_url });
       notice(`Report submitted: ${data.ticket.id}`);
-      // Add to local ticket list
+      // Add to local ticket list if not already present (polling may have added it)
       const newTicket: Ticket = { ...data.ticket, timeline: data.ticket.timeline || [] };
-      setTickets((p) => [newTicket, ...p]);
+      setTickets((p) => p.some((t) => t.id === newTicket.id) ? p : [newTicket, ...p]);
       setId(data.ticket.id);
+      // Trigger immediate refresh to get full ticket data
+      refreshAll();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Could not connect to the server.";
       notice(`Submission failed: ${msg}`);
@@ -176,13 +185,15 @@ export default function Dashboard() {
               : " No open lighting incident is currently linked to this sensor.";
         const tracker = result.tracking_url ? ` Track it: ${result.tracking_url}` : "";
         setSensorMsg({ text: `Three readings sent.${assignment}${tracker}`, error: false });
+        // Refresh tickets to pick up any newly created/updated sensor ticket
+        refreshAll();
       } catch (error: any) {
         setSensorMsg({ text: error.message, error: true });
       } finally {
         setSensorBusy(false);
       }
     },
-    [sendReading]
+    [sendReading, refreshAll]
   );
 
   const sensorValue = sensor?.value ?? null;
