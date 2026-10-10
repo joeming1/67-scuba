@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { loadState, classify, createTicket, notifyAssignment, emailStudentUpdate, publicTicket, requestBaseUrl, saveState } from "@/lib/store";
+import { loadState, classify, createTicket, notifyAssignment, emailStudentUpdate, publicTicket, requestBaseUrl, saveState, findSensorByLocation, addEvent } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +16,23 @@ export async function POST(request: NextRequest) {
   const location = typeof body.location === "string" && body.location.trim() ? body.location.trim() : "Not specified";
   const category = classify(body.description);
   const ticket = createTicket({ source: "student_report", description: body.description, location, category, studentEmail });
+
+  // For lighting tickets, auto-link to an LDR sensor if one exists for the same location.
+  // This ensures student-reported lighting issues also require LDR verification after the AI photo check.
+  if (category === "lighting") {
+    const match = findSensorByLocation(location);
+    if (match) {
+      ticket.sensor_id = match.id;
+      ticket.verification = {
+        type: "ldr_brightness",
+        state: "pending",
+        last_value: match.state.value ?? 0,
+        unit: "%",
+      };
+      addEvent(ticket, `Linked to room sensor ${match.id} (${match.state.location}). The repair will be verified by both AI photo check and LDR brightness recovery.`, "verification");
+    }
+  }
+
   const baseUrl = requestBaseUrl(request);
   if (ticket.assignment) await notifyAssignment(ticket, "assigned", baseUrl);
   // Send confirmation email to the student with their ticket ID and tracking link

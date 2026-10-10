@@ -1,1 +1,384 @@
-{"next_number": 1, "tickets": []}
+{
+  "next_number": 6,
+  "tickets": [
+    {
+      "id": "FX-0005",
+      "source": "student_report",
+      "summary": "the AC is making rattling noises",
+      "description": "the AC is making rattling noises",
+      "category": "air_conditioning",
+      "priority": "medium",
+      "location": "Room B-204",
+      "student_email": "test@test.com",
+      "status": "assigned",
+      "assignment": {
+        "department_id": "facilities_mechanical",
+        "department_name": "Facilities - Mechanical",
+        "technician_id": "tech_02",
+        "technician_name": "Daniel Lee",
+        "response": "pending"
+      },
+      "declined_technician_ids": [],
+      "scheduled_at": null,
+      "notification": {
+        "channel": "email",
+        "recipient": "laijoeming@gmail.com",
+        "status": "sent",
+        "updated_at": "2026-10-10T18:57:48.571Z",
+        "provider_id": "01a1272d-b3ef-7b3b-a88d-430d9e1fccba"
+      },
+      "technician_action_token": "yGc0h4mGGphkllWWOHFYIU0Ov94o3ne3A7NocchUeKA",
+      "student_tracking_token": "pGQMQboOWQtaaSmxiVvMi2wckwsZCNqn",
+      "completion_verification": null,
+      "sensor_id": null,
+      "verification": null,
+      "timeline": [
+        {
+          "id": "3dcd6b5b-4f3b-4814-abb0-198360487606",
+          "type": "notification",
+          "message": "Email assignment with technician response links sent to laijoeming@gmail.com.",
+          "created_at": "2026-10-10T18:57:49.139Z"
+        },
+        {
+          "id": "4d4244ef-1f64-4d64-ab0b-299006e702b6",
+          "type": "assigned",
+          "message": "Assigned to Daniel Lee in Facilities - Mechanical; awaiting response.",
+          "created_at": "2026-10-10T18:57:48.571Z"
+        },
+        {
+          "id": "f75050a3-af05-4f2e-83df-874209868ab7",
+          "type": "created",
+          "message": "Student report received and categorized as air conditioning.",
+          "created_at": "2026-10-10T18:57:48.571Z"
+        }
+      ],
+      "created_at": "2026-10-10T18:57:48.571Z",
+      "updated_at": "2026-10-10T18:57:49.139Z",
+      "email_update": {
+        "channel": "email",
+        "recipient": "test@test.com",
+        "status": "failed",
+        "updated_at": "2026-10-10T18:57:49.528Z",
+        "error": "You can only send testing emails to your own email address (laijoeming@gmail.com). To send emails to other recipients, please verify a domain at resend.com/domains, and change the `from` address to an email using this domain."
+      }
+    },
+    {
+      "id": "FX-0004",
+      "source": "student_report",
+      "summary": "lights are too dim in the room",
+      "description": "lights are too dim in the room",
+      "category": "lighting",
+      "priority": "medium",
+      "location": "Room B-204",
+      "student_email": "laijoeming@gmail.com",
+      "status": "assigned",
+      "assignment": {
+        "department_id": "facilities_electrical",
+        "department_name": "Facilities - Electrical",
+        "technician_id": "tech_04",
+        "technician_name": "Amir Hassan",
+        "response": "pending"
+      },
+      "declined_technician_ids": [],
+      "scheduled_at": null,
+      "notification": {
+        "channel": "email",
+        "recipient": "laijoeming@gmail.com",
+        "status": "sent",
+        "updated_at": "2026-10-10T18:57:37.691Z",
+        "provider_id": "01a1272d-8de3-7bc2-9724-e41c0e9397f1"
+      },
+      "technician_action_token": "Kfj7I8Yb-O_T6Q4397cGnmuyWcAJ3HNDbKzHR_CN-fQ",
+      "student_tracking_token": "Ts5IVjBRXX1CFAaSzXoH_qYQwzyRJue_",
+      "completion_verification": null,
+      "sensor_id": "ldr_b204",
+      "verification": {
+        "type": "ldr_brightness",
+        "state": "pending",
+        "last_value": 79,
+        "unit": "%"
+      },
+      "timeline": [
+        {
+          "id": "ec0e2fe2-d5c3-457f-9872-1edf97ded2d7",
+          "type": "notification",
+          "message": "Email assignment with technician response links sent to laijoeming@gmail.com.",
+          "created_at": "2026-10-10T18:57:39.493Z"
+        },
+        {
+          "id": "185059db-bd0e-4aa7-9efd-5728471312fa",
+          "type": "verification",
+          "message": "Linked to room sensor ldr_b204 (Room B-204). The repair will be verified by both AI photo check and LDR brightness recovery.",
+          "created_at": "2026-10-10T18:57:37.691Z"
+        },
+        {
+          "id": "04418e62-cf4d-4d38-b3ac-f5af59b1eb85",
+          "type": "assigned",
+          "message": "Assigned to Amir Hassan in Facilities - Electrical; awaiting response.",
+          "created_at": "2026-10-10T18:57:37.691Z"
+        },
+        {
+          "id": "0b9304fc-d2f7-438a-b494-3d4449717311",
+          "type": "created",
+          "message": "Student report received and categorized as lighting.",
+          "created_at": "2026-10-10T18:57:37.691Z"
+        }
+      ],
+      "created_at": "2026-10-10T18:57:37.691Z",
+      "updated_at": "2026-10-10T18:57:39.493Z",
+      "email_update": {
+        "channel": "email",
+        "recipient": "laijoeming@gmail.com",
+        "status": "sent",
+        "updated_at": "2026-10-10T18:57:40.092Z",
+        "provider_id": "01a1272d-9071-70d0-b8e4-57b7de73aa9e"
+      }
+    },
+    {
+      "id": "FX-0003",
+      "source": "student_report",
+      "summary": "lights are too dim in the room",
+      "description": "lights are too dim in the room",
+      "category": "lighting",
+      "priority": "medium",
+      "location": "Room B-204",
+      "student_email": "laijoeming@gmail.com",
+      "status": "assigned",
+      "assignment": {
+        "department_id": "facilities_electrical",
+        "department_name": "Facilities - Electrical",
+        "technician_id": "tech_01",
+        "technician_name": "Aina Rahman",
+        "response": "pending"
+      },
+      "declined_technician_ids": [],
+      "scheduled_at": null,
+      "notification": {
+        "channel": "email",
+        "recipient": "laijoeming@gmail.com",
+        "status": "sent",
+        "updated_at": "2026-10-10T18:57:09.635Z",
+        "provider_id": "01a1272d-1bfd-74e1-bfe0-3fdfe9c8f9c0"
+      },
+      "technician_action_token": "wPmnrAamrUKw6DtTyT9dEWxbl1SxUsWHSqx-FrlkBV4",
+      "student_tracking_token": "X-6j_k6ofyYH6eRx8WYZQA1AL1L6tvN9",
+      "completion_verification": null,
+      "sensor_id": null,
+      "verification": null,
+      "timeline": [
+        {
+          "id": "f9ac769a-6adb-4c14-962c-98cd3fa733e2",
+          "type": "notification",
+          "message": "Email assignment with technician response links sent to laijoeming@gmail.com.",
+          "created_at": "2026-10-10T18:57:10.225Z"
+        },
+        {
+          "id": "32a4d015-916b-4cec-81ed-d9ce1324fade",
+          "type": "assigned",
+          "message": "Assigned to Aina Rahman in Facilities - Electrical; awaiting response.",
+          "created_at": "2026-10-10T18:57:09.635Z"
+        },
+        {
+          "id": "864342a6-b2c3-4ff0-bd31-30a658f57bc9",
+          "type": "created",
+          "message": "Student report received and categorized as lighting.",
+          "created_at": "2026-10-10T18:57:09.635Z"
+        }
+      ],
+      "created_at": "2026-10-10T18:57:09.634Z",
+      "updated_at": "2026-10-10T18:57:10.225Z",
+      "email_update": {
+        "channel": "email",
+        "recipient": "laijoeming@gmail.com",
+        "status": "sent",
+        "updated_at": "2026-10-10T18:57:10.594Z",
+        "provider_id": "01a1272d-1d6c-7655-baef-2deaef2b5ab8"
+      }
+    },
+    {
+      "id": "FX-0002",
+      "source": "student_report",
+      "summary": "lighting issues",
+      "description": "lighting issues",
+      "category": "lighting",
+      "priority": "medium",
+      "location": "67",
+      "student_email": "laijoeming@gmail.com",
+      "status": "closed",
+      "assignment": {
+        "department_id": "facilities_electrical",
+        "department_name": "Facilities - Electrical",
+        "technician_id": "tech_01",
+        "technician_name": "Aina Rahman",
+        "response": "accepted"
+      },
+      "declined_technician_ids": [],
+      "scheduled_at": "2026-10-11T18:53:00.000Z",
+      "notification": {
+        "channel": "email",
+        "recipient": "laijoeming@gmail.com",
+        "status": "sent",
+        "updated_at": "2026-10-10T18:53:00.630Z",
+        "provider_id": "01a12729-4ff8-711d-9203-3eb930e1ff19"
+      },
+      "technician_action_token": "lz_H68rsbpTZGQbuChk9S2_MqqO_OqRxinXaYUWYs58",
+      "student_tracking_token": "Rk2_2r9ucKXwZHyoMvhRPf3zfPKzl4sE",
+      "completion_verification": {
+        "state": "passed",
+        "fixed": true,
+        "confidence": 0.85,
+        "reason": "The visible ceiling downlights are illuminated and functioning properly.",
+        "model": "gemini-3.8-flash",
+        "photo_url": "/evidence/fx-0002-772a1f8d-9152-4577-a297-dd3a14adf62c.jpg",
+        "checked_at": "2026-10-10T18:54:02.030Z"
+      },
+      "sensor_id": null,
+      "verification": null,
+      "timeline": [
+        {
+          "id": "8e3b2fbb-3216-4091-8fa5-52c6065253dc",
+          "type": "closed",
+          "message": "Repair completed and verified by AI photo check (85% confidence): The visible ceiling downlights are illuminated and functioning properly.",
+          "created_at": "2026-10-10T18:54:02.030Z"
+        },
+        {
+          "id": "4624bf32-2e06-4426-a327-97a7df8a8d6a",
+          "type": "work_started",
+          "message": "Aina Rahman arrived and started work. The visit was scheduled for 10/12/2026, 2:53:00 AM.",
+          "created_at": "2026-10-10T18:53:42.068Z"
+        },
+        {
+          "id": "1dcfaa03-d6e5-4abe-a98c-eae6ee6257ca",
+          "type": "scheduled",
+          "message": "Aina Rahman accepted and scheduled the fix for 10/12/2026, 2:53:00 AM.",
+          "created_at": "2026-10-10T18:53:40.032Z"
+        },
+        {
+          "id": "8219f40d-4fae-4256-adb5-a4aca9a712ce",
+          "type": "notification",
+          "message": "Email assignment with technician response links sent to laijoeming@gmail.com.",
+          "created_at": "2026-10-10T18:53:01.396Z"
+        },
+        {
+          "id": "23c0ff39-c349-4907-80b9-579209903b14",
+          "type": "assigned",
+          "message": "Assigned to Aina Rahman in Facilities - Electrical; awaiting response.",
+          "created_at": "2026-10-10T18:53:00.630Z"
+        },
+        {
+          "id": "fc086579-bee2-4b9c-bfb9-bc13f8724948",
+          "type": "created",
+          "message": "Student report received and categorized as lighting.",
+          "created_at": "2026-10-10T18:53:00.630Z"
+        }
+      ],
+      "created_at": "2026-10-10T18:53:00.630Z",
+      "updated_at": "2026-10-10T18:54:02.030Z",
+      "email_update": {
+        "channel": "email",
+        "recipient": "laijoeming@gmail.com",
+        "status": "sent",
+        "updated_at": "2026-10-10T18:54:02.489Z",
+        "provider_id": "01a1272a-3ea3-75b3-bd5e-98bc63532548"
+      }
+    },
+    {
+      "id": "FX-0001",
+      "source": "sensor",
+      "summary": "Low light detected in Room B-204",
+      "description": "Room brightness stayed below 25% for 3 consecutive readings.",
+      "category": "lighting",
+      "priority": "medium",
+      "location": "Room B-204",
+      "student_email": null,
+      "status": "closed",
+      "assignment": {
+        "department_id": "facilities_electrical",
+        "department_name": "Facilities - Electrical",
+        "technician_id": "tech_01",
+        "technician_name": "Aina Rahman",
+        "response": "accepted"
+      },
+      "declined_technician_ids": [],
+      "scheduled_at": "2026-10-11T18:51:00.000Z",
+      "notification": {
+        "channel": "email",
+        "recipient": "laijoeming@gmail.com",
+        "status": "sent",
+        "updated_at": "2026-10-10T18:45:30.563Z",
+        "provider_id": "01a12722-71d1-721f-b830-8e0fd6383355"
+      },
+      "technician_action_token": "HY8WsbYPeelUBcZ41jNRRpdNWUJ0gLLGA5Grw7ANQ3c",
+      "student_tracking_token": "d9kb28FBT0UAtREZ8UIPxbfTk0gOzks5",
+      "completion_verification": {
+        "state": "passed",
+        "fixed": true,
+        "confidence": 0.95,
+        "reason": "The completion photo shows multiple ceiling lights turned on and properly illuminating Room B-204, resolving the low light issue.",
+        "model": "gemini-3.5-flash-lite",
+        "photo_url": "/evidence/fx-0001-7f59646f-93ac-439f-b8d0-6af210d4ccb0.jpg",
+        "checked_at": "2026-10-10T18:52:10.051Z"
+      },
+      "sensor_id": "ldr_b204",
+      "verification": {
+        "type": "ldr_brightness",
+        "state": "passed",
+        "last_value": 91,
+        "unit": "%"
+      },
+      "timeline": [
+        {
+          "id": "5fc2d8f4-225b-4d66-8e31-4a1728b04b36",
+          "type": "closed",
+          "message": "Repair completed and verified by LDR recovery (91%) and AI photo check.",
+          "created_at": "2026-10-10T18:52:18.342Z"
+        },
+        {
+          "id": "5bca32b4-97a9-46c6-b971-49a98a5700c9",
+          "type": "verification",
+          "message": "AI photo check passed, but the light sensor has not confirmed recovery: The completion photo shows multiple ceiling lights turned on and properly illuminating Room B-204, resolving the low light issue.",
+          "created_at": "2026-10-10T18:52:10.051Z"
+        },
+        {
+          "id": "0e720d35-2f3a-433d-82de-a3635c8afc28",
+          "type": "work_started",
+          "message": "Aina Rahman arrived and started work. The visit was scheduled for 10/12/2026, 2:51:00 AM.",
+          "created_at": "2026-10-10T18:51:40.593Z"
+        },
+        {
+          "id": "89ff670d-20bc-4303-88e4-fad09b1a55ed",
+          "type": "scheduled",
+          "message": "Aina Rahman accepted and scheduled the fix for 10/12/2026, 2:51:00 AM.",
+          "created_at": "2026-10-10T18:51:38.735Z"
+        },
+        {
+          "id": "31886d5d-c836-4250-afd8-cf17863749a3",
+          "type": "notification",
+          "message": "Email assignment with technician response links sent to laijoeming@gmail.com.",
+          "created_at": "2026-10-10T18:45:31.322Z"
+        },
+        {
+          "id": "f8bb20da-a3c6-433c-a5fd-3c7590124cc3",
+          "type": "assigned",
+          "message": "Assigned to Aina Rahman in Facilities - Electrical; awaiting response.",
+          "created_at": "2026-10-10T18:45:30.563Z"
+        },
+        {
+          "id": "0b80f012-5b0f-453f-b174-f20326261400",
+          "type": "created",
+          "message": "Auto-created after 3 low-light readings (10%).",
+          "created_at": "2026-10-10T18:45:30.563Z"
+        }
+      ],
+      "created_at": "2026-10-10T18:45:30.563Z",
+      "updated_at": "2026-10-10T18:52:18.342Z",
+      "email_update": {
+        "channel": "email",
+        "recipient": "laijoeming@gmail.com",
+        "status": "sent",
+        "updated_at": "2026-10-10T18:52:18.870Z",
+        "provider_id": "01a12728-a9b9-7966-849b-60038ff352d8"
+      }
+    }
+  ]
+}

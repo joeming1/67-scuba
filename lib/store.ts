@@ -118,8 +118,7 @@ export function createTicket(opts: {
     verification:
       opts.source === "sensor"
         ? { type: "ldr_brightness", state: "pending", last_value: opts.sensorValue ?? 0, unit: "%" }
-        : null,
-    timeline: [],
+        : null,    timeline: [],
     created_at: now(),
     updated_at: now(),
   };
@@ -138,6 +137,21 @@ export function createTicket(opts: {
 
 export function openSensorTicket(sensorId: string): Ticket | undefined {
   return tickets.find((ticket) => ticket.sensor_id === sensorId && ticket.status !== "closed");
+}
+
+/**
+ * Find an LDR sensor whose location fuzzy-matches the given location string.
+ * Used to link student-reported lighting tickets to a physical sensor for verification.
+ */
+export function findSensorByLocation(location: string): { id: string; state: SensorState } | undefined {
+  const loc = location.toLowerCase().trim();
+  for (const [id, state] of Object.entries(latestSensors)) {
+    const sensorLoc = (state.location || "").toLowerCase().trim();
+    if (sensorLoc && (loc.includes(sensorLoc) || sensorLoc.includes(loc) || loc === sensorLoc)) {
+      return { id, state };
+    }
+  }
+  return undefined;
 }
 
 export function findTechnicianActionTicket(token: string): Ticket | undefined {

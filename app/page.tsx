@@ -418,7 +418,7 @@ export default function Dashboard() {
                   )}
 
                   {/* Verification flow explanation */}
-                  {selected.source === "sensor" && selected.status === "verification_pending" && (
+                  {selected.sensor_id && selected.verification && selected.status === "verification_pending" && (
                     <div className="triage">
                       <span>☼</span>
                       <div>
@@ -427,7 +427,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                   )}
-                  {selected.source === "sensor" && selected.completion_verification?.state === "passed" && selected.verification?.state !== "passed" && (
+                  {selected.sensor_id && selected.verification && selected.completion_verification?.state === "passed" && selected.verification?.state !== "passed" && (
                     <div className="triage">
                       <span>📸</span>
                       <div>

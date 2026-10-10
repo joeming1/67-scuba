@@ -12,7 +12,9 @@
 const char *WIFI_SSID = "YOUR_WIFI_SSID";
 const char *WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 // Use the computer's LAN IP; localhost will point back to the ESP32.
-const char *API_URL = "http://YOUR_COMPUTER_LAN_IP:3001/api/sensor-events";
+// Port 3000 = Next.js dev server. Ensure the server is started with -H 0.0.0.0
+// (or check that it listens on 0.0.0.0) so the ESP32 can reach it over LAN.
+const char *API_URL = "http://172.25.189.70:3000/api/sensor-events";
 
 constexpr int LDR_PIN = 34;         // ADC1 remains usable while Wi-Fi is active
 constexpr int LDR_DARK_ADC = 3500;  // Replace with measured dark-room value

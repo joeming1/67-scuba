@@ -53,15 +53,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     addEvent(ticket, `${ticket.assignment?.technician_name || "Technician"} resumed work after follow-up.`, "work_started");
     studentUpdateMessage = `${ticket.assignment?.technician_name || "Technician"} resumed work after follow-up.`;
   } else if (action === "repair_attempted" && ticket.status === "in_progress") {
-    if (ticket.source === "sensor") {
+    if (ticket.sensor_id && ticket.verification) {
       ticket.status = "verification_pending";
-      if (ticket.verification) ticket.verification.state = "pending";
-      const sensor = getSensor(ticket.sensor_id || "");
+      ticket.verification.state = "pending";
+      const sensor = getSensor(ticket.sensor_id);
       if (sensor) sensor.recovery_count = 0;
       addEvent(ticket, "Technician reported a repair attempt. Waiting for the LDR to verify room brightness.", "verification");
       if (sensor && sensor.value !== null && sensor.value < RECOVERY_THRESHOLD) {
         ticket.status = "follow_up";
-        if (ticket.verification) ticket.verification.state = "failed";
+        ticket.verification.state = "failed";
         addEvent(ticket, `Repair not verified: brightness is still ${sensor.value}%. Follow-up required.`, "follow_up");
       }
     } else {
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       addEvent(ticket, "Technician attempted the repair, but follow-up is needed before the issue can be marked complete.", "follow_up");
     }
     studentUpdateMessage =
-      ticket.source === "sensor"
+      ticket.sensor_id && ticket.verification
         ? "The technician attempted the repair. FixFlow is checking the room sensor and will keep the ticket open until the repair is verified."
         : "The technician attempted the repair, but follow-up is needed before the issue can be marked complete.";
   } else if (action === "complete_work" && ["in_progress", "verification_pending", "follow_up"].includes(ticket.status)) {
@@ -89,10 +89,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       await saveState();
       return NextResponse.json({ error: "The photo did not verify that the issue is fixed. Add a clearer photo or continue the repair.", ticket: publicTicket(ticket) }, { status: 422 });
     }
-    if (ticket.source === "sensor" && ticket.verification?.state !== "passed") {
+    if (ticket.sensor_id && ticket.verification?.state !== "passed") {
       ticket.status = "verification_pending";
-      if (ticket.verification) ticket.verification.state = "pending";
-      const sensor = getSensor(ticket.sensor_id || "");
+      ticket.verification.state = "pending";
+      const sensor = getSensor(ticket.sensor_id);
       if (sensor) sensor.recovery_count = 0;
       addEvent(ticket, `AI photo check passed, but the light sensor has not confirmed recovery: ${verification.reason}`, "verification");
       await emailStudentUpdate(ticket, "The completion photo passed, but the room sensor has not confirmed the repair. The ticket remains open.", requestBaseUrl(request));
@@ -100,8 +100,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: "The photo passed, but the sensor still needs to confirm recovery.", ticket: publicTicket(ticket) }, { status: 422 });
     }
     ticket.status = "closed";
-    addEvent(ticket, `Repair completed and verified by AI photo check (${Math.round(verification.confidence! * 100)}% confidence): ${verification.reason}`, "closed");
-    studentUpdateMessage = "The repair is complete and the completion photo passed verification.";
+    if (ticket.sensor_id && ticket.verification?.state === "passed") {
+      addEvent(ticket, `Repair completed and verified by AI photo check (${Math.round(verification.confidence! * 100)}% confidence) and LDR sensor recovery: ${verification.reason}`, "closed");
+      studentUpdateMessage = "The repair is complete. Both the completion photo and the room sensor confirmed the fix.";
+    } else {
+      addEvent(ticket, `Repair completed and verified by AI photo check (${Math.round(verification.confidence! * 100)}% confidence): ${verification.reason}`, "closed");
+      studentUpdateMessage = "The repair is complete and the completion photo passed verification.";
+    }
   } else {
     return NextResponse.json({ error: "That action is not valid for this ticket state." }, { status: 400 });
   }
