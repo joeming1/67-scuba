@@ -1,6 +1,6 @@
-# FixFlow LDR integration
+# FixitFelix LDR integration
 
-The ESP32 sends normalized `brightness_pct` events to FixFlow's existing `POST /api/sensor-events` endpoint. Three consecutive readings below 25% create one lighting ticket and notify the assigned technician. After a repair attempt, three readings at or above 40% satisfy the sensor side of verification; the technician must still submit a photo that Gemini approves before the ticket closes.
+The ESP32 sends normalized `brightness_pct` events to FixitFelix's existing `POST /api/sensor-events` endpoint. Three consecutive readings below 25% create one lighting ticket and notify the assigned technician. After a repair attempt, three readings at or above 40% satisfy the sensor side of verification; the technician must still submit a photo that Gemini approves before the ticket closes.
 
 ## One-time demo flow
 
@@ -11,7 +11,7 @@ After the technician records a repair attempt, click **Send bright readings** or
 ## ESP32 setup
 
 1. Wire the LDR and fixed resistor as a voltage divider between 3.3 V and GND. Connect the midpoint to GPIO 34 (ADC1). Do not feed 5 V into an ESP32 ADC pin.
-2. Start FixFlow on the same Wi-Fi network with a LAN-accessible bind address:
+2. Start FixitFelix on the same Wi-Fi network with a LAN-accessible bind address:
 
    ```sh
    HOST=0.0.0.0 PORT=3001 node demo/server.mjs

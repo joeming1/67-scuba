@@ -38,7 +38,7 @@ export default function StudentReportPage() {
 
   return (
     <div className="ldr-page">
-      <header><strong>FixFlow</strong><p>Campus maintenance help for students</p></header>
+      <header><strong>FixitFelix</strong><p>Campus maintenance help for students</p></header>
       <main>
         <section className="card">
           <h1>Report a maintenance issue</h1>
@@ -61,7 +61,7 @@ export default function StudentReportPage() {
           <p className="muted" style={{ marginBottom: 0 }}>After submitting, use your private tracking link to see the scheduled visit, technician updates, and completion photo. Technicians receive their work controls separately by email.</p>
         </section>
       </main>
-      <div className="footer">FixFlow · Student maintenance portal</div>
+      <div className="footer">FixitFelix · Student maintenance portal</div>
       <style>{`
         .ldr-page .demo-link{display:inline-block;border-radius:9px;padding:12px 16px;background:#0e8a7a;color:#fff;text-decoration:none;font-weight:700}
         .ldr-page *{box-sizing:border-box}.ldr-page body{margin:0;background:#f3f6f8;color:#17212b;font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}

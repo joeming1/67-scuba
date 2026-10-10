@@ -2,7 +2,7 @@
 
 ## Goal for the 24-hour demo
 
-Show Tencent WorkBuddy taking real workflow actions through a FixFlow MCP server. A dim-room LDR reading or a student's short free-text report becomes a pending incident. WorkBuddy triages it, the system routes it to the demo technician, and a repair is followed up until the available evidence supports closure.
+Show Tencent WorkBuddy taking real workflow actions through a FixitFelix MCP server. A dim-room LDR reading or a student's short free-text report becomes a pending incident. WorkBuddy triages it, the system routes it to the demo technician, and a repair is followed up until the available evidence supports closure.
 
 For the live demo, a person can prompt WorkBuddy to process pending incidents. The LDR event itself is recorded automatically, but do not claim that a sensor webhook automatically starts a WorkBuddy run unless that trigger has been implemented and confirmed in your WorkBuddy setup.
 
@@ -16,11 +16,11 @@ flowchart LR
         Sim[Sensor simulator fallback]
     end
 
-    subgraph App[FixFlow demo app - TypeScript]
+    subgraph App[FixitFelix demo app - TypeScript]
         Web[Next.js + React + Tailwind dashboard]
         API[Next.js Route Handlers]
         DB[(Supabase Postgres incident store)]
-        MCP[FixFlow MCP server<br/>TypeScript, local stdio]
+        MCP[FixitFelix MCP server<br/>TypeScript, local stdio]
     end
 
     WB[Tencent WorkBuddy]
@@ -46,7 +46,7 @@ Use the existing demo contract for JSON fields and thresholds. Keep the MCP serv
 
 ### Engineer 1 — WorkBuddy agent and backend
 
-- First prove WorkBuddy can call one local FixFlow MCP tool. This is the highest-risk dependency, so do it before building the full app.
+- First prove WorkBuddy can call one local FixitFelix MCP tool. This is the highest-risk dependency, so do it before building the full app.
 - Implement the pending incident store and API routes for student reports, sensor events, and ticket actions.
 - Implement a fixed demo routing directory and state-transition/verification checks.
 - Implement MCP tools with stable names and typed inputs/outputs:

@@ -1,4 +1,4 @@
-# FixFlow Dashboard
+# FixitFelix Dashboard
 
 Campus facilities incident management dashboard for the 67-scuba hackathon demo.
 
@@ -36,5 +36,5 @@ The app runs on `http://localhost:3000`.
 Copy `demo/.env.example` to `.env.local` and fill in:
 
 - `GEMINI_API_KEY` — for AI photo verification
-- `RESEND_API_KEY` + `FIXFLOW_FROM_EMAIL` — for email notifications
-- `TWILIO_*` + `FIXFLOW_WHATSAPP_ENABLED=true` — for WhatsApp notifications (disabled by default)
+- `RESEND_API_KEY` + `FIXITFELIX_FROM_EMAIL` — for email notifications
+- `TWILIO_*` + `FIXITFELIX_WHATSAPP_ENABLED=true` — for WhatsApp notifications (disabled by default)

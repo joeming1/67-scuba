@@ -1,12 +1,12 @@
-# FixFlow Demo Contract
+# FixitFelix Demo Contract
 
-This file is the agreement for the three-engineer, 24-hour demo. Tencent WorkBuddy is the workflow agent: it reads pending incidents, classifies and prioritizes them, and chooses the next action using FixFlow MCP tools. The backend/MCP server owns persistence, the approved routing directory, duplicate prevention, valid state transitions, and sensor verification. The frontend submits inputs and renders canonical records; it must not invent statuses or assignments.
+This file is the agreement for the three-engineer, 24-hour demo. Tencent WorkBuddy is the workflow agent: it reads pending incidents, classifies and prioritizes them, and chooses the next action using FixitFelix MCP tools. The backend/MCP server owns persistence, the approved routing directory, duplicate prevention, valid state transitions, and sensor verification. The frontend submits inputs and renders canonical records; it must not invent statuses or assignments.
 
 ## Demo scope
 
 - Primary flow: an LDR detects a room that is too dark and records a pending incident. WorkBuddy processes it through MCP, routes a lighting work order, and verifies the repair from later sensor readings.
 - Secondary flow: a student enters a short free-text issue (for example, a portal login problem). WorkBuddy classifies it and proposes the department and technician through MCP.
-- WorkBuddy must perform live classification and workflow actions through the FixFlow MCP server during the demo. Do not replace WorkBuddy calls with a mocked agent response.
+- WorkBuddy must perform live classification and workflow actions through the FixitFelix MCP server during the demo. Do not replace WorkBuddy calls with a mocked agent response.
 - Technician notifications and follow-up messages may be represented in the ticket timeline; sending real email or messages is out of scope.
 - The DHT/air-conditioning scenario is a future extension. Do not build it before both flows above work.
 
@@ -112,7 +112,7 @@ new -> assigned -> in_progress -> verification_pending -> closed
 
 ## WorkBuddy MCP contract
 
-WorkBuddy is the agent used during the demo. It calls the FixFlow MCP server to read incident context and request workflow actions; the server validates and records those actions. The initial tool set is:
+WorkBuddy is the agent used during the demo. It calls the FixitFelix MCP server to read incident context and request workflow actions; the server validates and records those actions. The initial tool set is:
 
 | Tool | Purpose |
 |---|---|

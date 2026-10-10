@@ -122,7 +122,7 @@ export default function TechnicianPage({ params }: { params: Promise<{ token: st
   if (!token) return null;
   if (!ticket) return (
     <div className="ldr-page">
-      <header><strong>FixFlow</strong><p>Technician workspace</p></header>
+      <header><strong>FixitFelix</strong><p>Technician workspace</p></header>
       <main><section className="card"><p className="muted">Loading assigned ticket…</p></section></main>
       <Styles />
     </div>
@@ -210,7 +210,7 @@ export default function TechnicianPage({ params }: { params: Promise<{ token: st
 
   return (
     <div className="ldr-page">
-      <header><strong>FixFlow</strong><p>Technician workspace</p></header>
+      <header><strong>FixitFelix</strong><p>Technician workspace</p></header>
       <main>
         {notice.text && <div className={`notice ${notice.type}`} aria-live="polite">{notice.text}</div>}
         <section className="card">

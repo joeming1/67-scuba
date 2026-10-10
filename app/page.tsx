@@ -15,8 +15,10 @@ type Ticket = {
   verification?: { type: string; state: string; last_value: number; unit: string };
   completion_verification?: { state: string; reason?: string; photo_url?: string; confidence?: number } | null;
   timeline: { id: string; type: string; message: string; created_at: string }[];
+  created_at?: string;
   scheduled_at?: string | null;
   notification?: { channel: string; status: string } | null;
+  sensor_id?: string | null;
 };
 
 interface SensorState {
@@ -206,7 +208,7 @@ export default function Dashboard() {
         <div className="brand">
           <span className="logo">f</span>
           <div>
-            <b>fixflow</b>
+            <b>fixitfelix</b>
             <small>CAMPUS OPS</small>
           </div>
         </div>
@@ -233,7 +235,7 @@ export default function Dashboard() {
         <div className="sidebottom">
           <div className="help">
             <b>Need a hand?</b>
-            <p>See how FixFlow keeps campus moving.</p>
+            <p>See how FixitFelix keeps campus moving.</p>
             <a>Explore the guide ↗</a>
           </div>
           <div className="profile">
@@ -249,7 +251,7 @@ export default function Dashboard() {
       {/* Main section */}
       <section className="main">
         <header className="topbar">
-          <a className="brandWord" href="#"><span className="brandGlyph">F</span>FixFlow</a>
+          <a className="brandWord" href="#"><span className="brandGlyph">F</span>FixitFelix</a>
           <nav className="topnav">
             <button className="topnavActive" onClick={() => setFilter("All tickets")}>Overview</button>
             <button onClick={() => setFilter("All tickets")}>Queue</button>
@@ -266,7 +268,7 @@ export default function Dashboard() {
           {/* Hero */}
           <div className="welcome">
             <div className="heroCopy">
-              <div className="eyebrow">FIXFLOW | NORTHBRIDGE CAMPUS</div>
+              <div className="eyebrow">FIXITFELIX | NORTHBRIDGE CAMPUS</div>
               <h1>Campus, under control<span>.</span></h1>
               <p>One place to report issues, track repairs, and keep campus moving.</p>
             </div>
@@ -360,7 +362,7 @@ export default function Dashboard() {
                   visible.map((t) => (
                     <button key={t.id} className={`row ${id === t.id ? "chosen" : ""}`} onClick={() => { setId(t.id); setMobile(true); }}>
                       <span className={`glyph ${t.category}`}>{t.category === "lighting" ? "☼" : t.category === "student_portal" ? "▣" : t.category === "air_conditioning" ? "❄" : "✳"}</span>
-                      <span className="rowmain"><b>{t.summary}</b><small>{t.id} · {t.location} · {time(t.created_at)}</small></span>
+                      <span className="rowmain"><b>{t.summary}</b><small>{t.id} · {t.location} · {time(t.created_at || "")}</small></span>
                       <span className={`priority ${t.priority}`}>{t.priority}</span>
                       <span className={`status ${t.status}`}>{t.status === "new" ? "● " : ""}{labels[t.status] || t.status}</span>
                       <span className="arrow">›</span>
@@ -496,7 +498,7 @@ export default function Dashboard() {
             <label>What needs attention?<textarea required maxLength={600} rows={4} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Describe the issue in a few words..." /></label>
             <label>Where is it happening?<input required maxLength={120} value={loc} onChange={(e) => setLoc(e.target.value)} placeholder="Building, room, or 'Online'" /></label>
             <label>Your email for updates<input required type="email" maxLength={120} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" /></label>
-            <div className="modalfoot"><span>✳ Routed by FixFlow</span><button className="primary">Send report →</button></div>
+            <div className="modalfoot"><span>✳ Routed by FixitFelix</span><button className="primary">Send report →</button></div>
           </form>
         </div>
       )}

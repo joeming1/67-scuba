@@ -3,11 +3,30 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Ticket, SensorState, PublicTicket, Assignment, Notification } from "./types";
+import { isSupabaseConfigured } from "./supabase";
+import {
+  dbUpsertTicket,
+  dbGetAllTickets,
+  dbGetTicketById,
+  dbGetTicketByToken,
+  dbGetTicketBySensorId,
+  dbUpsertSensorState,
+  dbGetAllSensorStates,
+  dbInsertSensorEvent,
+  dbGetNextTicketNumber,
+} from "./db";
 
+// Use /tmp on Vercel (read-only FS everywhere else), local disk in dev.
+// Vercel sets VERCEL=1; on `next dev` it's unset.
+const isVercel = process.env.VERCEL === "1";
 const here = dirname(fileURLToPath(import.meta.url));
-const dataDir = join(here, "..", "demo", "data");
+const dataDir = isVercel
+  ? join("/tmp", "fixitfelix-data")
+  : join(here, "..", "demo", "data");
 const dataFile = join(dataDir, "tickets.json");
-const evidenceDir = join(dataDir, "evidence");
+const evidenceDir = isVercel
+  ? join("/tmp", "fixitfelix-evidence")
+  : join(dataDir, "evidence");
 
 export const LOW_LIGHT_THRESHOLD = 25;
 export const RECOVERY_THRESHOLD = 40;
@@ -31,10 +50,18 @@ export const technicians = [
   { id: "tech_00", name: "Helpdesk Team", department_id: "helpdesk_triage", available: true },
 ];
 
+// In-memory cache — loaded from Supabase (or JSON file fallback) on startup
 let tickets: Ticket[] = [];
 let latestSensors: Record<string, SensorState> = {};
 let nextNumber = 1;
 let loaded = false;
+
+/**
+ * Whether Supabase is the active persistence backend.
+ */
+function useSupabase(): boolean {
+  return isSupabaseConfigured();
+}
 
 export function now(): string {
   return new Date().toISOString();
@@ -72,6 +99,22 @@ export function classify(description: string): Ticket["category"] {
   if (/\b(ac|air.?con\w*|temperature|hot|warm|cooling|rattle|leak)\b/.test(text)) return "air_conditioning";
   if (/\b(portal|login|log in|password|student account)\b/.test(text)) return "student_portal";
   return "other";
+}
+
+/**
+ * Persist a single ticket to the active backend (Supabase or JSON file).
+ * Called after every mutation to a ticket.
+ */
+export async function persistTicket(ticket: Ticket): Promise<void> {
+  if (useSupabase()) {
+    try {
+      await dbUpsertTicket(ticket);
+    } catch (err) {
+      console.error(`[store] Failed to persist ticket ${ticket.id} to Supabase:`, err);
+    }
+  } else {
+    await saveState();
+  }
 }
 
 export function createTicket(opts: {
@@ -118,7 +161,8 @@ export function createTicket(opts: {
     verification:
       opts.source === "sensor"
         ? { type: "ldr_brightness", state: "pending", last_value: opts.sensorValue ?? 0, unit: "%" }
-        : null,    timeline: [],
+        : null,
+    timeline: [],
     created_at: now(),
     updated_at: now(),
   };
@@ -136,21 +180,85 @@ export function createTicket(opts: {
 }
 
 export function openSensorTicket(sensorId: string): Ticket | undefined {
+  // Priority 1: tickets actively waiting for LDR verification
+  const awaitingVerification = tickets.find(
+    (ticket) =>
+      ticket.sensor_id === sensorId &&
+      (ticket.status === "verification_pending" || ticket.status === "follow_up")
+  );
+  if (awaitingVerification) return awaitingVerification;
+
+  // Priority 2: in_progress with AI photo passed (sensor verification about to start)
+  const photoPassed = tickets.find(
+    (ticket) =>
+      ticket.sensor_id === sensorId &&
+      ticket.status === "in_progress" &&
+      ticket.completion_verification?.state === "passed"
+  );
+  if (photoPassed) return photoPassed;
+
+  // Priority 3: any other non-closed ticket linked to this sensor
   return tickets.find((ticket) => ticket.sensor_id === sensorId && ticket.status !== "closed");
+}
+
+/**
+ * Get ALL non-closed tickets linked to a sensor, sorted by verification priority.
+ * Used by the sensor-events route to process LDR readings against every linked ticket.
+ */
+export function getOpenSensorTickets(sensorId: string): Ticket[] {
+  const linked = tickets.filter((t) => t.sensor_id === sensorId && t.status !== "closed");
+  // Sort: verification_pending/follow_up first, then in_progress with photo passed, then rest
+  return linked.sort((a, b) => {
+    const prio = (t: Ticket) => {
+      if (t.status === "verification_pending" || t.status === "follow_up") return 0;
+      if (t.status === "in_progress" && t.completion_verification?.state === "passed") return 1;
+      return 2;
+    };
+    return prio(a) - prio(b);
+  });
 }
 
 /**
  * Find an LDR sensor whose location fuzzy-matches the given location string.
  * Used to link student-reported lighting tickets to a physical sensor for verification.
+ *
+ * Matching strategy (in order):
+ * 1. Exact or substring match (e.g. "Room B-204" matches "B-204")
+ * 2. Room-number match — extract a room code like "B-204" or "204" and match
+ * 3. Fallback: if the student typed a generic location (e.g. "room 1") with no
+ *    room code, link to the first available lighting sensor so that LDR
+ *    verification still runs.
  */
 export function findSensorByLocation(location: string): { id: string; state: SensorState } | undefined {
   const loc = location.toLowerCase().trim();
+
+  // 1. Exact / substring match
   for (const [id, state] of Object.entries(latestSensors)) {
     const sensorLoc = (state.location || "").toLowerCase().trim();
     if (sensorLoc && (loc.includes(sensorLoc) || sensorLoc.includes(loc) || loc === sensorLoc)) {
       return { id, state };
     }
   }
+
+  // 2. Room-number match — extract a code like "b-204", "b204", "204"
+  const roomCodeMatch = loc.match(/([a-z]?-?\d{2,4})/);
+  if (roomCodeMatch) {
+    const roomCode = roomCodeMatch[1].replace(/-/g, ""); // e.g. "b204"
+    for (const [id, state] of Object.entries(latestSensors)) {
+      const sensorLoc = (state.location || "").toLowerCase().trim();
+      const sensorCode = sensorLoc.replace(/[-\s]/g, "");
+      if (sensorCode.includes(roomCode)) {
+        return { id, state };
+      }
+    }
+  }
+
+  // 3. Fallback — link to the first available sensor so LDR verification still runs
+  const firstSensor = Object.entries(latestSensors)[0];
+  if (firstSensor) {
+    return { id: firstSensor[0], state: firstSensor[1] };
+  }
+
   return undefined;
 }
 
@@ -184,8 +292,34 @@ export function getSensor(sensorId: string): SensorState | undefined {
   return latestSensors[sensorId];
 }
 
-export function setSensor(sensorId: string, sensor: SensorState): void {
+/**
+ * Update a sensor's in-memory state and persist to the active backend.
+ */
+export async function setSensor(sensorId: string, sensor: SensorState): Promise<void> {
   latestSensors[sensorId] = sensor;
+  if (useSupabase()) {
+    try {
+      await dbUpsertSensorState(sensorId, sensor);
+    } catch (err) {
+      console.error(`[store] Failed to persist sensor ${sensorId} to Supabase:`, err);
+    }
+  }
+}
+
+/**
+ * Log a raw sensor event (for audit trail) if using Supabase.
+ */
+export async function logSensorEvent(event: {
+  sensor_id: string;
+  sensor_type: string;
+  metric: string;
+  value: number;
+  location: string;
+  observed_at?: string;
+}): Promise<void> {
+  if (useSupabase()) {
+    await dbInsertSensorEvent(event);
+  }
 }
 
 export function getEvidenceDir(): string {
@@ -196,9 +330,30 @@ export function getDataFile(): string {
   return dataFile;
 }
 
+/**
+ * Load all state from the active backend into in-memory cache.
+ * - Supabase: loads tickets + sensor states from DB
+ * - JSON file: loads from demo/data/tickets.json (fallback)
+ */
 export async function loadState(): Promise<void> {
   if (loaded) return;
   loaded = true;
+
+  if (useSupabase()) {
+    try {
+      console.log("[store] Loading state from Supabase...");
+      tickets = await dbGetAllTickets();
+      latestSensors = await dbGetAllSensorStates();
+      nextNumber = await dbGetNextTicketNumber();
+      console.log(`[store] Loaded ${tickets.length} tickets, ${Object.keys(latestSensors).length} sensors from Supabase`);
+      return;
+    } catch (err) {
+      console.error("[store] Failed to load from Supabase, falling back to JSON file:", err);
+      loaded = false; // allow retry on next call
+    }
+  }
+
+  // JSON file fallback
   await mkdir(dataDir, { recursive: true });
   try {
     const saved = JSON.parse(await readFile(dataFile, "utf8"));
@@ -215,12 +370,18 @@ export async function loadState(): Promise<void> {
       ticket.student_tracking_token ||= randomBytes(24).toString("base64url");
       ticket.completion_verification ??= null;
     }
+    loaded = true;
   } catch {
     await saveState();
   }
 }
 
+/**
+ * Save all tickets to JSON file (fallback mode only).
+ * In Supabase mode, individual tickets are persisted via persistTicket().
+ */
 export async function saveState(): Promise<void> {
+  if (useSupabase()) return; // no-op — Supabase persists per-ticket
   await mkdir(dataDir, { recursive: true });
   await writeFile(dataFile, JSON.stringify({ next_number: nextNumber, tickets }, null, 2));
 }
@@ -229,7 +390,7 @@ export async function saveState(): Promise<void> {
 
 export async function sendEmail({ to, subject, text }: { to: string; subject: string; text: string }) {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.FIXFLOW_FROM_EMAIL;
+  const from = process.env.FIXITFELIX_FROM_EMAIL;
   if (!apiKey || !from || !to) return { status: "not_configured" };
   try {
     const response = await fetch("https://api.resend.com/emails", {
@@ -272,14 +433,14 @@ export async function sendTelegram({ text }: { text: string }) {
 }
 
 export async function emailStudentUpdate(ticket: Ticket, message: string, baseUrl: string) {
-  const recipient = ticket.student_email || process.env.FIXFLOW_NOTIFY_TO;
-  const origin = (baseUrl || process.env.FIXFLOW_PUBLIC_URL || `http://localhost:3000`).replace(/\/+$/, "");
-  const emailEnabled = process.env.FIXFLOW_EMAIL_ENABLED !== "false"; // default true
-  const telegramEnabled = process.env.FIXFLOW_TELEGRAM_ENABLED === "true";
+  const recipient = ticket.student_email || process.env.FIXITFELIX_NOTIFY_TO;
+  const origin = (baseUrl || process.env.FIXITFELIX_PUBLIC_URL || `http://localhost:3000`).replace(/\/+$/, "");
+  const emailEnabled = process.env.FIXITFELIX_EMAIL_ENABLED !== "false"; // default true
+  const telegramEnabled = process.env.FIXITFELIX_TELEGRAM_ENABLED === "true";
 
   // Build the same message text for both channels
   const lines = [
-    `Update for FixFlow ticket ${ticket.id}`,
+    `Update for FixitFelix ticket ${ticket.id}`,
     `Status: ${ticket.status.replaceAll("_", " ")}`,
     message,
     ticket.scheduled_at ? `Scheduled visit: ${new Date(ticket.scheduled_at).toLocaleString()}` : "",
@@ -290,7 +451,7 @@ export async function emailStudentUpdate(ticket: Ticket, message: string, baseUr
   const emailResult = emailEnabled
     ? await sendEmail({
         to: recipient || "",
-        subject: `FixFlow update for ${ticket.id}: ${ticket.status.replaceAll("_", " ")}`,
+        subject: `FixitFelix update for ${ticket.id}: ${ticket.status.replaceAll("_", " ")}`,
         text: fullText,
       })
     : { status: "not_configured" as const };
@@ -314,9 +475,9 @@ export async function emailStudentUpdate(ticket: Ticket, message: string, baseUr
 }
 
 export async function notifyAssignment(ticket: Ticket, reason: string, baseUrl: string) {
-  const emailRecipient = process.env.FIXFLOW_NOTIFY_TO;
-  const emailEnabled = process.env.FIXFLOW_EMAIL_ENABLED !== "false"; // default true
-  const telegramEnabled = process.env.FIXFLOW_TELEGRAM_ENABLED === "true";
+  const emailRecipient = process.env.FIXITFELIX_NOTIFY_TO;
+  const emailEnabled = process.env.FIXITFELIX_EMAIL_ENABLED !== "false"; // default true
+  const telegramEnabled = process.env.FIXITFELIX_TELEGRAM_ENABLED === "true";
 
   ticket.technician_action_token = randomBytes(32).toString("base64url");
   const origin = (baseUrl || `http://localhost:3000`).replace(/\/+$/, "");
@@ -329,7 +490,7 @@ export async function notifyAssignment(ticket: Ticket, reason: string, baseUrl: 
 
   // Build the same message text for both channels
   const lines = [
-    `FixFlow ticket ${ticket.id} assigned to ${ticket.assignment?.technician_name}.`,
+    `FixitFelix ticket ${ticket.id} assigned to ${ticket.assignment?.technician_name}.`,
     `Issue: ${ticket.summary}`,
     `Location: ${ticket.location}`,
     `Department: ${ticket.assignment?.department_name}`,
@@ -342,7 +503,7 @@ export async function notifyAssignment(ticket: Ticket, reason: string, baseUrl: 
   if (emailEnabled) {
     const email = await sendEmail({
       to: emailRecipient || "",
-      subject: `FixFlow assignment: ${ticket.id}`,
+      subject: `FixitFelix assignment: ${ticket.id}`,
       text: fullText,
     });
     channels.push("email");
@@ -372,7 +533,7 @@ export async function notifyAssignment(ticket: Ticket, reason: string, baseUrl: 
     (result as any).telegram = {
       status: telegramResult.status,
       ...(telegramResult.id ? { task_id: telegramResult.id } : {}),
-      ...(telegramResult.sentMessage ? { sent_message: telegramResult.sentMessage } : {}),
+      ...(telegramResult as any).sentMessage ? { sent_message: (telegramResult as any).sentMessage } : {},
       ...("error" in telegramResult && telegramResult.error ? { error: telegramResult.error } : {}),
     };
   }
@@ -413,8 +574,8 @@ export async function verifyRepairWithAI(ticket: Ticket, evidence: { data_url: s
     (error as any).status = 413;
     throw error;
   }
-  const model = process.env.FIXFLOW_VISION_MODEL || "gemini-2.5-flash";
-  const fallbackModels = (process.env.FIXFLOW_VISION_FALLBACK_MODELS || "gemini-2.0-flash,gemini-1.5-flash")
+  const model = process.env.FIXITFELIX_VISION_MODEL || "gemini-2.5-flash";
+  const fallbackModels = (process.env.FIXITFELIX_VISION_FALLBACK_MODELS || "gemini-2.0-flash,gemini-1.5-flash")
     .split(",")
     .map((c) => c.trim())
     .filter(Boolean);
@@ -424,7 +585,7 @@ export async function verifyRepairWithAI(ticket: Ticket, evidence: { data_url: s
       {
         parts: [
           {
-            text: `Assess whether the maintenance issue is visibly fixed based on this completion photo.\nIssue: ${ticket.summary}\nDetails: ${ticket.description}\nLocation: ${ticket.location}\nReturn JSON with keys fixed (boolean), confidence (number 0 to 1), and reason (short string). Set fixed true only when the photo clearly shows the reported issue is resolved. If the image is inconclusive, unrelated, or does not show the repair, set fixed false.`,
+            text: `Assess whether the maintenance issue is visibly fixed based on this completion photo.\nIssue: ${ticket.summary}\nDetails: ${ticket.description}\nLocation: ${ticket.location}\nReturn JSON with keys fixed (boolean), confidence (number 0 to 1), and reason (short string).\n\nGuidelines:\n- Set fixed=true when the photo clearly shows the reported issue is resolved.\n- For lighting issues (flickering, dim, dark): if the photo shows a well-lit room with lights functioning normally, set fixed=true. Flickering cannot be captured in a still photo, so a photo showing steady, adequate lighting is acceptable evidence.\n- For air conditioning issues: if the photo shows the AC unit turned on and functioning, set fixed=true.\n- Set fixed=false only when the photo clearly shows the issue persists (e.g., lights off in a dark room, visible damage) or the photo is unrelated to the issue.\n- If the image is inconclusive or does not show the repair area at all, set fixed=false.`,
           },
           { inline_data: { mime_type: imageData.slice("data:".length, imageData.indexOf(";")), data: imageData.slice(imageData.indexOf(",") + 1) } },
         ],
@@ -486,7 +647,7 @@ export async function verifyRepairWithAI(ticket: Ticket, evidence: { data_url: s
     throw error;
   }
   const confidence = Math.max(0, Math.min(1, verdict.confidence));
-  const passed = verdict.fixed && confidence >= Number(process.env.FIXFLOW_VERIFICATION_CONFIDENCE || 0.7);
+  const passed = verdict.fixed && confidence >= Number(process.env.FIXITFELIX_VERIFICATION_CONFIDENCE || 0.7);
   await mkdir(evidenceDir, { recursive: true });
   const extension = imageData.startsWith("data:image/png;") ? "png" : imageData.startsWith("data:image/webp;") ? "webp" : "jpg";
   const filename = `${ticket.id.toLowerCase()}-${randomUUID()}.${extension}`;
@@ -549,7 +710,7 @@ export function escapeHtml(value: unknown): string {
 }
 
 export function requestBaseUrl(request: Request): string {
-  const configured = process.env.FIXFLOW_PUBLIC_URL?.trim();
+  const configured = process.env.FIXITFELIX_PUBLIC_URL?.trim();
   if (configured) return configured.replace(/\/+$/, "");
   const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0].trim();
   const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0].trim();

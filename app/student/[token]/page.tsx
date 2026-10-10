@@ -40,7 +40,7 @@ export default function StudentTicketPage({ params }: { params: Promise<{ token:
   }, [token, refresh]);
 
   if (error) return <div className="ldr-page"><div className="card"><p className="error">{error}</p></div><Styles /></div>;
-  if (!ticket) return <div className="ldr-page"><header><strong>FixFlow</strong><div>Student ticket updates</div></header><main><div className="card"><p className="muted">Loading your ticket…</p></div></main><Styles /></div>;
+  if (!ticket) return <div className="ldr-page"><header><strong>FixitFelix</strong><div>Student ticket updates</div></header><main><div className="card"><p className="muted">Loading your ticket…</p></div></main><Styles /></div>;
 
   const statusText = ticket.status.replaceAll("_", " ");
   const events = ticket.timeline.map((event, i) => (
@@ -51,7 +51,7 @@ export default function StudentTicketPage({ params }: { params: Promise<{ token:
 
   return (
     <div className="ldr-page">
-      <header><strong>FixFlow</strong><div>Student ticket updates</div></header>
+      <header><strong>FixitFelix</strong><div>Student ticket updates</div></header>
       <main>
         <div className="card">
           <div style={{ display: "flex", justifyContent: "space-between", gap: "15px", alignItems: "center" }}>

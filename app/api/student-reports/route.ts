@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { loadState, classify, createTicket, notifyAssignment, emailStudentUpdate, publicTicket, requestBaseUrl, saveState, findSensorByLocation, addEvent } from "@/lib/store";
+import { loadState, classify, createTicket, notifyAssignment, emailStudentUpdate, publicTicket, requestBaseUrl, persistTicket, findSensorByLocation, addEvent } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     `Your report has been received and categorized as ${category.replaceAll("_", " ")}. ${ticket.assignment ? `It has been assigned to ${ticket.assignment.technician_name} in ${ticket.assignment.department_name}.` : "It is awaiting triage."} You will receive further updates as the technician works on your issue.`,
     baseUrl
   );
-  await saveState();
+  await persistTicket(ticket);
   return NextResponse.json(
     {
       ticket: publicTicket(ticket),

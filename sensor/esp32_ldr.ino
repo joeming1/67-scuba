@@ -1,5 +1,5 @@
 /*
- * FixFlow ESP32 LDR sender.
+ * FixitFelix ESP32 LDR sender.
  * Dependencies: Arduino-ESP32 core (WiFi, HTTPClient, time).
  * Replace local network settings and ADC calibration values before flashing.
  * Never commit real Wi-Fi credentials.
@@ -22,7 +22,7 @@ constexpr int LDR_BRIGHT_ADC = 700; // Replace with measured bright-room value
 constexpr bool INVERT_ADC =
     false; // Set true if bright ADC is greater than dark ADC
 constexpr unsigned long SAMPLE_INTERVAL_MS =
-    2000; // FixFlow needs three consecutive low samples
+    2000; // FixitFelix needs three consecutive low samples
 constexpr int ADC_FILTER_SAMPLES = 10;
 const char *LDR_SENSOR_ID = "ldr_b204";
 const char *LOCATION = "Room B-204";

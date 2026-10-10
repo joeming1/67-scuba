@@ -78,7 +78,7 @@ export default function SensorDemoPage() {
 
   return (
     <div className="sensor-demo-page">
-      <header><strong>FixFlow</strong><p>LDR sensor demo · Room B-204</p></header>
+      <header><strong>FixitFelix</strong><p>LDR sensor demo · Room B-204</p></header>
       <main>
         <section className="card">
           <h1>Simulate room brightness</h1>

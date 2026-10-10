@@ -19,7 +19,7 @@ export default function SensorCalibratePage() {
   return (
     <div className="calibrate-page">
       <main>
-        <h1>FixFlow LDR calibration</h1>
+        <h1>FixitFelix LDR calibration</h1>
         <p>Enter representative raw ADC readings captured from the ESP32 in the demo room. This helper generates firmware constants and previews the normalized 0–100% mapping; it does not connect to the board.</p>
         <div className="grid">
           <div>

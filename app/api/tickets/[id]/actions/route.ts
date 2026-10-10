@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   loadState,
-  saveState,
   findTicketById,
   applyAssignmentResponse,
   emailStudentUpdate,
@@ -9,6 +8,7 @@ import {
   addEvent,
   publicTicket,
   requestBaseUrl,
+  persistTicket,
   RECOVERY_THRESHOLD,
   getSensor,
 } from "@/lib/store";
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (result.outcome === "accepted") {
         await emailStudentUpdate(ticket, `The technician accepted the visit and scheduled the repair for ${new Date(ticket.scheduled_at!).toLocaleString()}.`, requestBaseUrl(request));
       }
-      await saveState();
+      await persistTicket(ticket);
       return NextResponse.json({ ticket: publicTicket(ticket), outcome: result.outcome });
     } catch (error: any) {
       return NextResponse.json({ error: error.message, ticket: publicTicket(ticket) }, { status: error.status || 400 });
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
     studentUpdateMessage =
       ticket.sensor_id && ticket.verification
-        ? "The technician attempted the repair. FixFlow is checking the room sensor and will keep the ticket open until the repair is verified."
+        ? "The technician attempted the repair. FixitFelix is checking the room sensor and will keep the ticket open until the repair is verified."
         : "The technician attempted the repair, but follow-up is needed before the issue can be marked complete.";
   } else if (action === "complete_work" && ["in_progress", "verification_pending", "follow_up"].includes(ticket.status)) {
     let verification;
@@ -78,25 +78,25 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       verification = await verifyRepairWithAI(ticket, body.evidence);
     } catch (error: any) {
       ticket.completion_verification = { state: "unavailable", reason: error.message, checked_at: new Date().toISOString() };
-      await emailStudentUpdate(ticket, "The technician submitted a completion photo, but FixFlow could not verify the repair yet. The ticket remains open.", requestBaseUrl(request));
-      await saveState();
+      await emailStudentUpdate(ticket, "The technician submitted a completion photo, but FixitFelix could not verify the repair yet. The ticket remains open.", requestBaseUrl(request));
+      await persistTicket(ticket);
       return NextResponse.json({ error: error.message, ticket: publicTicket(ticket) }, { status: error.status || 502 });
     }
     ticket.completion_verification = verification;
     if (verification.state !== "passed") {
       addEvent(ticket, `AI photo check did not confirm completion (${Math.round(verification.confidence! * 100)}% confidence): ${verification.reason}`, "verification_failed");
-      await emailStudentUpdate(ticket, "The technician submitted a completion photo, but FixFlow could not confirm the repair. The ticket remains open for follow-up.", requestBaseUrl(request));
-      await saveState();
+      await emailStudentUpdate(ticket, "The technician submitted a completion photo, but FixitFelix could not confirm the repair. The ticket remains open for follow-up.", requestBaseUrl(request));
+      await persistTicket(ticket);
       return NextResponse.json({ error: "The photo did not verify that the issue is fixed. Add a clearer photo or continue the repair.", ticket: publicTicket(ticket) }, { status: 422 });
     }
     if (ticket.sensor_id && ticket.verification?.state !== "passed") {
       ticket.status = "verification_pending";
-      ticket.verification.state = "pending";
+      if (ticket.verification) ticket.verification.state = "pending";
       const sensor = getSensor(ticket.sensor_id);
       if (sensor) sensor.recovery_count = 0;
       addEvent(ticket, `AI photo check passed, but the light sensor has not confirmed recovery: ${verification.reason}`, "verification");
       await emailStudentUpdate(ticket, "The completion photo passed, but the room sensor has not confirmed the repair. The ticket remains open.", requestBaseUrl(request));
-      await saveState();
+      await persistTicket(ticket);
       return NextResponse.json({ error: "The photo passed, but the sensor still needs to confirm recovery.", ticket: publicTicket(ticket) }, { status: 422 });
     }
     ticket.status = "closed";
@@ -112,6 +112,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
   if (typeof body.note === "string" && body.note.trim()) addEvent(ticket, body.note.trim(), "note");
   if (studentUpdateMessage) await emailStudentUpdate(ticket, studentUpdateMessage, requestBaseUrl(request));
-  await saveState();
+  await persistTicket(ticket);
   return NextResponse.json({ ticket: publicTicket(ticket) });
 }

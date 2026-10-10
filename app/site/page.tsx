@@ -2,7 +2,7 @@ export default function SitePage() {
   return (
     <>
       <header className="wrap hero">
-        <div className="eyebrow">FixFlow · Hackathon build guide</div>
+        <div className="eyebrow">FixitFelix · Hackathon build guide</div>
         <h1>Three engineers.<br />One faster helpdesk.</h1>
         <p className="lede">A focused 24-hour plan for a standalone demo that turns a short student report or sensor alert into a routed ticket, then follows the repair through verification.</p>
         <div className="chips">
@@ -57,7 +57,7 @@ export default function SitePage() {
           <div className="callout"><strong>Demo boundaries:</strong> assignments are fictional, student classification uses simple demo rules, and the sensor simulator is the fallback. WhatsApp needs Twilio settings; repair completion needs a Gemini API key and photo evidence.</div>
         </section>
       </main>
-      <footer className="wrap">Prepared from the FixFlow engineering workflow. Static share page; no login or external assets required.</footer>
+      <footer className="wrap">Prepared from the FixitFelix engineering workflow. Static share page; no login or external assets required.</footer>
       <style>{`
         :root{--ink:#17212b;--muted:#62727c;--paper:#f2f6f5;--card:#fff;--line:#dce6e5;--navy:#102b3f;--teal:#0e8a7a;--teal-soft:#e8f6f2;--blue:#315fa8;--blue-soft:#edf2fc;--gold:#94600c;--gold-soft:#fcf3df;--shadow:0 14px 38px #102b3f0d}
         *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.6 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}

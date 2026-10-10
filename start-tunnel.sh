@@ -1,5 +1,5 @@
 #!/bin/bash
-# Start FixFlow with Cloudflare Tunnel — accessible from any internet connection
+# Start FixitFelix with Cloudflare Tunnel — accessible from any internet connection
 # Usage: ./start-tunnel.sh
 
 set -e
@@ -35,15 +35,15 @@ cloudflared tunnel --url http://localhost:$PORT 2>&1 | while read -r line; do
     if [ -n "$TUNNEL_URL" ]; then
       echo ""
       echo "================================================"
-      echo "  FixFlow is live at: $TUNNEL_URL"
+      echo "  FixitFelix is live at: $TUNNEL_URL"
       echo "  Local: http://localhost:$PORT"
       echo "  Press Ctrl+C to stop both processes."
       echo "================================================"
       echo ""
       # Update .env.local with the tunnel URL
       if [ -f "$PROJECT_DIR/.env.local" ]; then
-        sed -i.bak "s|^FIXFLOW_PUBLIC_URL=.*|FIXFLOW_PUBLIC_URL=$TUNNEL_URL|" "$PROJECT_DIR/.env.local"
-        echo "Updated FIXFLOW_PUBLIC_URL in .env.local"
+        sed -i.bak "s|^FIXITFELIX_PUBLIC_URL=.*|FIXITFELIX_PUBLIC_URL=$TUNNEL_URL|" "$PROJECT_DIR/.env.local"
+        echo "Updated FIXITFELIX_PUBLIC_URL in .env.local"
         echo "Restart the dev server to pick up the new URL."
       fi
     fi
