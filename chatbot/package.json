@@ -1,0 +1,14 @@
+{
+  "name": "fix-it-felix",
+  "version": "3.0.0",
+  "description": "Fix It Felix - AI dispatch bot powered by Telegram + Gemini",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "node-telegram-bot-api": "^0.66.0"
+  }
+}

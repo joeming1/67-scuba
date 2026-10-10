@@ -1,0 +1,13 @@
+{
+  "status": "confirmed",
+  "reasoning": "Technician agreed to the booking and confirmed availability.",
+  "followup_message": "Thanks boss! I'll let the customer know you're coming tomorrow at 2pm. See you there!",
+  "summary": "Technician confirmed plumbing job for tomorrow 2pm in PJ.",
+  "extracted_data": {
+    "available_date": "2026-10-11",
+    "available_time": "14:00",
+    "estimated_duration": null,
+    "price_quoted": null,
+    "alternative_times": []
+  }
+}

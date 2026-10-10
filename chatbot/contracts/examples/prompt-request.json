@@ -1,0 +1,10 @@
+{
+  "message": "Ask the technician if he is available tomorrow at 2pm for a plumbing job in Petaling Jaya. Customer has a leaking kitchen pipe that needs urgent fixing.",
+  "context": {
+    "job_type": "plumbing",
+    "location": "Petaling Jaya",
+    "priority": "high",
+    "customer_name": null
+  },
+  "chat_id": null
+}
