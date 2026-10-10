@@ -1,6 +1,224 @@
 {
-  "next_number": 8,
+  "next_number": 13,
   "tickets": [
+    {
+      "id": "FX-0012",
+      "source": "student_report",
+      "summary": "Portal login page shows error 500",
+      "description": "Portal login page shows error 500",
+      "category": "student_portal",
+      "priority": "medium",
+      "location": "Online",
+      "student_email": "laijoeming@gmail.com",
+      "status": "assigned",
+      "assignment": {
+        "department_id": "it_services",
+        "department_name": "IT Services",
+        "technician_id": "tech_03",
+        "technician_name": "Mei Tan",
+        "response": "pending"
+      },
+      "declined_technician_ids": [],
+      "scheduled_at": null,
+      "notification": {
+        "channel": "email",
+        "recipient": "laijoeming@gmail.com",
+        "status": "sent",
+        "updated_at": "2026-10-10T18:10:21.370Z",
+        "provider_id": "01a12702-41a2-7bdf-8d39-19d0a9f45c46"
+      },
+      "technician_action_token": "xkT2icfmUrDR7SJRIY0v9vepoBOshE5j_q8fcrduoPQ",
+      "student_tracking_token": "2M7hy8o9hl_SCrMZPFLEs1QubD_wRpqf",
+      "completion_verification": null,
+      "sensor_id": null,
+      "verification": null,
+      "timeline": [
+        {
+          "id": "c3b4a79b-569f-4bd7-b834-ea271b171160",
+          "type": "notification",
+          "message": "Email assignment with technician response links sent to laijoeming@gmail.com.",
+          "created_at": "2026-10-10T18:10:21.880Z"
+        },
+        {
+          "id": "4b2ba81a-9009-483f-a20f-4ebd20d2fbbb",
+          "type": "assigned",
+          "message": "Assigned to Mei Tan in IT Services; awaiting response.",
+          "created_at": "2026-10-10T18:10:21.370Z"
+        },
+        {
+          "id": "5eb7c358-20b8-4b90-88ac-990bb148b27d",
+          "type": "created",
+          "message": "Student report received and categorized as student portal.",
+          "created_at": "2026-10-10T18:10:21.370Z"
+        }
+      ],
+      "created_at": "2026-10-10T18:10:21.370Z",
+      "updated_at": "2026-10-10T18:10:21.880Z",
+      "email_update": {
+        "channel": "email",
+        "recipient": "laijoeming@gmail.com",
+        "status": "sent",
+        "updated_at": "2026-10-10T18:10:22.283Z",
+        "provider_id": "01a12702-430f-7f3c-bbca-106928f3a9e9"
+      }
+    },
+    {
+      "id": "FX-0011",
+      "source": "student_report",
+      "summary": "The air conditioner in the lab is leaking water",
+      "description": "The air conditioner in the lab is leaking water",
+      "category": "air_conditioning",
+      "priority": "medium",
+      "location": "Lab E-201",
+      "student_email": "laijoeming@gmail.com",
+      "status": "assigned",
+      "assignment": {
+        "department_id": "facilities_mechanical",
+        "department_name": "Facilities - Mechanical",
+        "technician_id": "tech_02",
+        "technician_name": "Daniel Lee",
+        "response": "pending"
+      },
+      "declined_technician_ids": [],
+      "scheduled_at": null,
+      "notification": {
+        "channel": "email",
+        "recipient": "laijoeming@gmail.com",
+        "status": "sent",
+        "updated_at": "2026-10-10T18:10:13.822Z",
+        "provider_id": "01a12702-272d-7b4b-893a-e87f5983a21f"
+      },
+      "technician_action_token": "kvBLNHBFu7gb3sK4KGmSNxv1fwp28u2D9QJA7KN4E1k",
+      "student_tracking_token": "RqjWuk57FbYr0ZfOJ22VONgdfq_Xz8S1",
+      "completion_verification": null,
+      "sensor_id": null,
+      "verification": null,
+      "timeline": [
+        {
+          "id": "8f5ef504-1efb-4fad-a90f-2970157b6957",
+          "type": "notification",
+          "message": "Email assignment with technician response links sent to laijoeming@gmail.com.",
+          "created_at": "2026-10-10T18:10:15.191Z"
+        },
+        {
+          "id": "34a54a9f-0dcb-4cef-8a23-eab6ff583e2e",
+          "type": "assigned",
+          "message": "Assigned to Daniel Lee in Facilities - Mechanical; awaiting response.",
+          "created_at": "2026-10-10T18:10:13.821Z"
+        },
+        {
+          "id": "e57e1661-8544-4ef5-a0df-56ce689fcedc",
+          "type": "created",
+          "message": "Student report received and categorized as air conditioning.",
+          "created_at": "2026-10-10T18:10:13.821Z"
+        }
+      ],
+      "created_at": "2026-10-10T18:10:13.821Z",
+      "updated_at": "2026-10-10T18:10:15.192Z",
+      "email_update": {
+        "channel": "email",
+        "recipient": "laijoeming@gmail.com",
+        "status": "sent",
+        "updated_at": "2026-10-10T18:10:15.661Z",
+        "provider_id": "01a12702-2957-7e42-afd9-61a2f5497a9b"
+      }
+    },
+    {
+      "id": "FX-0010",
+      "source": "student_report",
+      "summary": "The light in my study room is flickering badly",
+      "description": "The light in my study room is flickering badly",
+      "category": "lighting",
+      "priority": "medium",
+      "location": "Room D-302",
+      "student_email": "laijoeming@gmail.com",
+      "status": "unassigned",
+      "assignment": null,
+      "declined_technician_ids": [],
+      "scheduled_at": null,
+      "notification": {
+        "channel": "email",
+        "recipient": "laijoeming@gmail.com",
+        "status": "sent",
+        "updated_at": "2026-10-10T18:09:51.548Z",
+        "provider_id": "01a12701-c994-702f-92d5-bd7d5c871707"
+      },
+      "technician_action_token": null,
+      "student_tracking_token": "VEQaQqYVayuWJfDgkUC8fgBifayiYAOC",
+      "completion_verification": null,
+      "sensor_id": null,
+      "verification": null,
+      "timeline": [
+        {
+          "id": "a098440c-3d88-4918-a385-c09c61eabd94",
+          "type": "created",
+          "message": "Student report received and categorized as lighting.",
+          "created_at": "2026-10-10T18:09:50.316Z"
+        }
+      ],
+      "created_at": "2026-10-10T18:09:50.315Z",
+      "updated_at": "2026-10-10T18:09:50.316Z"
+    },
+    {
+      "id": "FX-0009",
+      "source": "student_report",
+      "summary": "the light in the room is broken",
+      "description": "the light in the room is broken",
+      "category": "lighting",
+      "priority": "medium",
+      "location": "room 67",
+      "student_email": "demo@fixflow.local",
+      "status": "unassigned",
+      "assignment": null,
+      "declined_technician_ids": [],
+      "scheduled_at": null,
+      "notification": null,
+      "technician_action_token": null,
+      "student_tracking_token": "G26jAGarxb76qdo6UBmxW13Mkydg1zM5",
+      "completion_verification": null,
+      "sensor_id": null,
+      "verification": null,
+      "timeline": [
+        {
+          "id": "2ede9bfc-8019-4895-bab2-0758ddb91a02",
+          "type": "created",
+          "message": "Student report received and categorized as lighting.",
+          "created_at": "2026-10-10T18:06:02.062Z"
+        }
+      ],
+      "created_at": "2026-10-10T18:06:02.062Z",
+      "updated_at": "2026-10-10T18:06:02.062Z"
+    },
+    {
+      "id": "FX-0008",
+      "source": "student_report",
+      "summary": "the light in the room is broken",
+      "description": "the light in the room is broken",
+      "category": "lighting",
+      "priority": "medium",
+      "location": "room 67",
+      "student_email": "demo@fixflow.local",
+      "status": "unassigned",
+      "assignment": null,
+      "declined_technician_ids": [],
+      "scheduled_at": null,
+      "notification": null,
+      "technician_action_token": null,
+      "student_tracking_token": "mhbKFrk5j8oU782PqfJvhc6fO7hfT8kg",
+      "completion_verification": null,
+      "sensor_id": null,
+      "verification": null,
+      "timeline": [
+        {
+          "id": "dab8cd82-f37f-4c83-806b-e471bf0aabab",
+          "type": "created",
+          "message": "Student report received and categorized as lighting.",
+          "created_at": "2026-10-10T18:06:02.020Z"
+        }
+      ],
+      "created_at": "2026-10-10T18:06:02.019Z",
+      "updated_at": "2026-10-10T18:06:02.020Z"
+    },
     {
       "id": "FX-0007",
       "source": "student_report",

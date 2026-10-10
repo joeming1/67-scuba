@@ -248,14 +248,15 @@ export async function emailStudentUpdate(ticket: Ticket, message: string, baseUr
       .filter(Boolean)
       .join("\n\n"),
   });
-  ticket.notification = {
+  // Store in a separate field so we don't overwrite the technician notification status
+  (ticket as any).email_update = {
     channel: "email",
     recipient: recipient || null,
     status: result.status,
     updated_at: now(),
     ...(result.id ? { provider_id: result.id } : {}),
     ...("error" in result && result.error ? { error: result.error } : {}),
-  } as Notification;
+  };
   return result;
 }
 
