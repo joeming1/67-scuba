@@ -226,6 +226,7 @@ export async function saveState(): Promise<void> {
 }
 
 // Notification helpers
+
 export async function sendEmail({ to, subject, text }: { to: string; subject: string; text: string }) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.FIXFLOW_FROM_EMAIL;
@@ -246,54 +247,95 @@ export async function sendEmail({ to, subject, text }: { to: string; subject: st
   }
 }
 
+/**
+ * Send a dispatch prompt to Fix It Felix (Telegram bot).
+ * Felix uses Gemini AI to craft a natural message and sends it to the technician via Telegram.
+ */
+export async function sendTelegram({
+  message,
+  context,
+}: {
+  message: string;
+  context?: Record<string, unknown>;
+}) {
+  const felixUrl = process.env.FELIX_API_URL?.trim();
+  if (!felixUrl) return { status: "not_configured" as const };
+  const chatId = process.env.FELIX_TECHNICIAN_CHAT_ID?.trim() || null;
+  try {
+    const response = await fetch(`${felixUrl.replace(/\/+$/, "")}/prompt`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message, context: context || {}, chat_id: chatId }),
+      signal: AbortSignal.timeout(15000),
+    });
+    const payload = await response.json().catch(() => ({}));
+    return response.ok
+      ? { status: "sent" as const, id: payload.taskId || null, sentMessage: payload.sentMessage || null }
+      : { status: "failed" as const, error: payload.error || `Felix returned ${response.status}.` };
+  } catch {
+    return { status: "failed" as const, error: "Felix (Telegram) request failed." };
+  }
+}
+
 export async function emailStudentUpdate(ticket: Ticket, message: string, baseUrl: string) {
   const recipient = ticket.student_email || process.env.FIXFLOW_NOTIFY_TO;
   const origin = (baseUrl || process.env.FIXFLOW_PUBLIC_URL || `http://localhost:3000`).replace(/\/+$/, "");
-  const result = await sendEmail({
-    to: recipient || "",
-    subject: `FixFlow update for ${ticket.id}: ${ticket.status.replaceAll("_", " ")}`,
-    text: [
-      `Update for FixFlow ticket ${ticket.id}`,
-      `Status: ${ticket.status.replaceAll("_", " ")}`,
-      message,
-      ticket.scheduled_at ? `Scheduled visit: ${new Date(ticket.scheduled_at).toLocaleString()}` : "",
-      `Track this ticket: ${origin}/student/${ticket.student_tracking_token}`,
-    ]
-      .filter(Boolean)
-      .join("\n\n"),
-  });
-  // Store in a separate field so we don't overwrite the technician notification status
+  const emailEnabled = process.env.FIXFLOW_EMAIL_ENABLED !== "false"; // default true
+  const telegramEnabled = process.env.FIXFLOW_TELEGRAM_ENABLED === "true";
+
+  const emailResult = emailEnabled
+    ? await sendEmail({
+        to: recipient || "",
+        subject: `FixFlow update for ${ticket.id}: ${ticket.status.replaceAll("_", " ")}`,
+        text: [
+          `Update for FixFlow ticket ${ticket.id}`,
+          `Status: ${ticket.status.replaceAll("_", " ")}`,
+          message,
+          ticket.scheduled_at ? `Scheduled visit: ${new Date(ticket.scheduled_at).toLocaleString()}` : "",
+          `Track this ticket: ${origin}/student/${ticket.student_tracking_token}`,
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
+      })
+    : { status: "not_configured" as const };
+
+  // Also send student updates via Telegram if enabled
+  let telegramResult = null;
+  if (telegramEnabled) {
+    telegramResult = await sendTelegram({
+      message: `FixFlow update for ${ticket.id}: ${message}${ticket.scheduled_at ? ` Scheduled: ${new Date(ticket.scheduled_at).toLocaleString()}.` : ""} Track: ${origin}/student/${ticket.student_tracking_token}`,
+      context: { ticket_id: ticket.id, status: ticket.status, type: "student_update" },
+    });
+  }
+
   (ticket as any).email_update = {
-    channel: "email",
+    channel: emailEnabled ? "email" : "skipped",
     recipient: recipient || null,
-    status: result.status,
+    status: emailResult.status,
     updated_at: now(),
-    ...(result.id ? { provider_id: result.id } : {}),
-    ...("error" in result && result.error ? { error: result.error } : {}),
+    ...(emailResult.id ? { provider_id: emailResult.id } : {}),
+    ...("error" in emailResult && emailResult.error ? { error: emailResult.error } : {}),
+    ...(telegramResult ? { telegram: telegramResult } : {}),
   };
-  return result;
+  return emailResult;
 }
 
 export async function notifyAssignment(ticket: Ticket, reason: string, baseUrl: string) {
-  const recipient = process.env.FIXFLOW_WHATSAPP_TO;
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const from = process.env.TWILIO_WHATSAPP_FROM;
-  const contentSid = process.env.TWILIO_WHATSAPP_CONTENT_SID?.trim();
-  const whatsappEnabled = process.env.FIXFLOW_WHATSAPP_ENABLED === "true";
   const emailRecipient = process.env.FIXFLOW_NOTIFY_TO;
-  const result: Notification = {
-    channel: whatsappEnabled ? "whatsapp" : "email",
-    recipient: whatsappEnabled ? recipient || null : emailRecipient || null,
-    status: "not_configured",
-    updated_at: now(),
-  };
+  const emailEnabled = process.env.FIXFLOW_EMAIL_ENABLED !== "false"; // default true
+  const telegramEnabled = process.env.FIXFLOW_TELEGRAM_ENABLED === "true";
+
   ticket.technician_action_token = randomBytes(32).toString("base64url");
   const origin = (baseUrl || `http://localhost:3000`).replace(/\/+$/, "");
   const technicianUrl = `${origin}/technician/${ticket.technician_action_token}`;
   const acceptUrl = `${origin}/technician-actions/${ticket.technician_action_token}?choice=accept`;
   const declineUrl = `${origin}/technician-actions/${ticket.technician_action_token}?choice=decline`;
-  if (!whatsappEnabled) {
+
+  const channels: string[] = [];
+  const statuses: string[] = [];
+
+  // --- Email ---
+  if (emailEnabled) {
     const email = await sendEmail({
       to: emailRecipient || "",
       subject: `FixFlow assignment: ${ticket.id}`,
@@ -306,66 +348,62 @@ export async function notifyAssignment(ticket: Ticket, reason: string, baseUrl: 
         `Open your technician workspace to accept and schedule the visit, start work, record an attempt, or submit a completion photo: ${technicianUrl}`,
       ].join("\n\n"),
     });
-    result.status = email.status;
-    if ("id" in email && email.id) result.provider_id = email.id;
-    if ("error" in email && email.error) result.error = email.error;
-  } else if (accountSid && authToken && from && recipient) {
-    try {
-      const formFields: Record<string, string> = {
-        From: from.startsWith("whatsapp:") ? from : `whatsapp:${from}`,
-        To: recipient.startsWith("whatsapp:") ? recipient : `whatsapp:${recipient}`,
-      };
-      if (contentSid) {
-        formFields.ContentSid = contentSid;
-        formFields.ContentVariables = JSON.stringify({
-          "1": ticket.id,
-          "2": ticket.assignment?.technician_name || "",
-          "3": ticket.summary,
-          "4": ticket.location,
-          "5": ticket.assignment?.department_name || "",
-          "6": reason,
-          "7": acceptUrl,
-          "8": declineUrl,
-        });
-      } else {
-        formFields.Body = [
-          `FixFlow ticket ${ticket.id} assigned to ${ticket.assignment?.technician_name}.`,
-          `Issue: ${ticket.summary}`,
-          `Location: ${ticket.location}`,
-          `Department: ${ticket.assignment?.department_name}`,
-          `Reason: ${reason}`,
-          `Accept and schedule: ${acceptUrl}`,
-          `Decline: ${declineUrl}`,
-        ].join("\n");
-      }
-      const form = new URLSearchParams(formFields);
-      const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(accountSid)}/Messages.json`, {
-        method: "POST",
-        headers: {
-          authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
-          "content-type": "application/x-www-form-urlencoded",
-        },
-        body: form,
-        signal: AbortSignal.timeout(8000),
-      });
-      const payload = await response.json().catch(() => ({}));
-      result.status = response.ok ? "sent" : "failed";
-      if (!response.ok) result.error = payload.message || `WhatsApp provider returned ${response.status}.`;
-      else result.provider_id = payload.sid || null;
-    } catch {
-      result.status = "failed";
-      result.error = "WhatsApp provider request failed.";
-    }
+    channels.push("email");
+    statuses.push(`email:${email.status}`);
   }
+
+  // --- Telegram (via Fix It Felix bot) ---
+  let telegramResult = null;
+  if (telegramEnabled) {
+    telegramResult = await sendTelegram({
+      message: `New assignment: Ticket ${ticket.id} — ${ticket.summary}. Location: ${ticket.location}. Technician: ${ticket.assignment?.technician_name}. Department: ${ticket.assignment?.department_name}. Reason: ${reason}. Open workspace: ${technicianUrl}`,
+      context: {
+        ticket_id: ticket.id,
+        technician_id: ticket.assignment?.technician_id,
+        technician_name: ticket.assignment?.technician_name,
+        location: ticket.location,
+        summary: ticket.summary,
+        department: ticket.assignment?.department_name,
+        reason,
+        type: "assignment",
+      },
+    });
+    channels.push("telegram");
+    statuses.push(`telegram:${telegramResult.status}`);
+  }
+
+  // Build result — show email status as the primary for backward compat
+  const primaryChannel = channels[0] || "none";
+  const primaryStatus = statuses[0]?.split(":")[1] || "not_configured";
+  const result: Notification = {
+    channel: primaryChannel,
+    recipient: emailRecipient || null,
+    status: primaryStatus,
+    updated_at: now(),
+  };
+
+  // Store telegram result alongside if both were used
+  if (telegramResult) {
+    (result as any).telegram = {
+      status: telegramResult.status,
+      ...(telegramResult.id ? { task_id: telegramResult.id } : {}),
+      ...(telegramResult.sentMessage ? { sent_message: telegramResult.sentMessage } : {}),
+      ...("error" in telegramResult && telegramResult.error ? { error: telegramResult.error } : {}),
+    };
+  }
+
   ticket.notification = result;
-  const channelLabel = result.channel === "email" ? "Email" : "WhatsApp";
+
+  const label = channels.join(" + ") || "no";
+  const allSent = statuses.every((s) => s.endsWith(":sent"));
+  const anyFailed = statuses.some((s) => s.endsWith(":failed"));
   addEvent(
     ticket,
-    result.status === "sent"
-      ? `${channelLabel} assignment with technician response links sent to ${result.recipient}.`
-      : result.status === "failed"
-        ? `${channelLabel} assignment could not be sent to ${result.recipient}; ticket remains awaiting technician response.`
-        : `${channelLabel} notifications are not configured; ticket remains awaiting technician response.`,
+    allSent
+      ? `${label} notification sent for ${ticket.id}.`
+      : anyFailed
+        ? `${label} notification partially failed (${statuses.join(", ")}); ticket remains awaiting technician response.`
+        : `${label} notifications not configured; ticket remains awaiting technician response.`,
     "notification"
   );
   return result;
