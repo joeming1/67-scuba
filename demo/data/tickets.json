@@ -1,6 +1,80 @@
 {
-  "next_number": 4,
+  "next_number": 6,
   "tickets": [
+    {
+      "id": "FX-0005",
+      "source": "student_report",
+      "summary": "fix the lghtihtht",
+      "description": "fix the lghtihtht",
+      "category": "other",
+      "priority": "medium",
+      "location": "room 69",
+      "student_email": "laijoeming@gmail.com",
+      "status": "unassigned",
+      "assignment": null,
+      "declined_technician_ids": [],
+      "scheduled_at": null,
+      "notification": null,
+      "technician_action_token": null,
+      "student_tracking_token": "SXuQa-BZ9Ufp9W1LyKqMOcDLiRgREK6O",
+      "completion_verification": null,
+      "sensor_id": null,
+      "verification": null,
+      "timeline": [
+        {
+          "id": "a76d491e-08c9-48be-a1e5-08b17d096f68",
+          "type": "created",
+          "message": "Student report received and categorized as other.",
+          "created_at": "2026-10-10T18:27:06.333Z"
+        }
+      ],
+      "created_at": "2026-10-10T18:27:06.333Z",
+      "updated_at": "2026-10-10T18:27:06.333Z",
+      "email_update": {
+        "channel": "email",
+        "recipient": "laijoeming@gmail.com",
+        "status": "sent",
+        "updated_at": "2026-10-10T18:27:07.171Z",
+        "provider_id": "01a12711-989d-72cd-bdff-4d4472671bea"
+      }
+    },
+    {
+      "id": "FX-0004",
+      "source": "student_report",
+      "summary": "fix the lghtihtht",
+      "description": "fix the lghtihtht",
+      "category": "other",
+      "priority": "medium",
+      "location": "room 69",
+      "student_email": "laijoeming@gmail.com",
+      "status": "unassigned",
+      "assignment": null,
+      "declined_technician_ids": [],
+      "scheduled_at": null,
+      "notification": null,
+      "technician_action_token": null,
+      "student_tracking_token": "LYKEi1ZBa6lou4HbGxEl7p0_kyS_qnQq",
+      "completion_verification": null,
+      "sensor_id": null,
+      "verification": null,
+      "timeline": [
+        {
+          "id": "2b810125-0851-4fa8-9dab-a4b95fe8eef5",
+          "type": "created",
+          "message": "Student report received and categorized as other.",
+          "created_at": "2026-10-10T18:26:10.605Z"
+        }
+      ],
+      "created_at": "2026-10-10T18:26:10.605Z",
+      "updated_at": "2026-10-10T18:26:10.605Z",
+      "email_update": {
+        "channel": "email",
+        "recipient": "laijoeming@gmail.com",
+        "status": "sent",
+        "updated_at": "2026-10-10T18:26:11.303Z",
+        "provider_id": "01a12710-be81-7245-b7ba-27e23ad5e552"
+      }
+    },
     {
       "id": "FX-0003",
       "source": "student_report",
@@ -71,16 +145,16 @@
       "priority": "medium",
       "location": "test",
       "student_email": "test@test.com",
-      "status": "assigned",
+      "status": "in_progress",
       "assignment": {
         "department_id": "helpdesk_triage",
         "department_name": "Helpdesk Triage",
         "technician_id": "tech_00",
         "technician_name": "Helpdesk Team",
-        "response": "pending"
+        "response": "accepted"
       },
       "declined_technician_ids": [],
-      "scheduled_at": null,
+      "scheduled_at": "2026-10-11T18:22:00.000Z",
       "notification": {
         "channel": "email",
         "recipient": "laijoeming@gmail.com",
@@ -90,10 +164,36 @@
       },
       "technician_action_token": "ucTL7ZcrDztUGgFKkEx9UrEHsUrqiTr7b7Cxq21LpvM",
       "student_tracking_token": "gSn_oUjDFiOHn5KPK9ypgHEH8yYiS9u5",
-      "completion_verification": null,
+      "completion_verification": {
+        "state": "failed",
+        "fixed": false,
+        "confidence": 0.1,
+        "reason": "The issue description is a placeholder ('test'), making it impossible to determine what was broken or verify if it is resolved.",
+        "model": "gemini-3.8-flash",
+        "photo_url": "/evidence/fx-0002-29c85e95-a5ca-41b2-b6a1-4669e771e77c.jpg",
+        "checked_at": "2026-10-10T18:23:14.143Z"
+      },
       "sensor_id": null,
       "verification": null,
       "timeline": [
+        {
+          "id": "d8567f27-8fb2-4219-9d6a-4d2fce0ff142",
+          "type": "verification_failed",
+          "message": "AI photo check did not confirm completion (10% confidence): The issue description is a placeholder ('test'), making it impossible to determine what was broken or verify if it is resolved.",
+          "created_at": "2026-10-10T18:23:14.144Z"
+        },
+        {
+          "id": "096c3c58-7646-4aa9-b4ba-f1f497e248eb",
+          "type": "work_started",
+          "message": "Helpdesk Team arrived and started work. The visit was scheduled for 10/12/2026, 2:22:00 AM.",
+          "created_at": "2026-10-10T18:22:56.043Z"
+        },
+        {
+          "id": "7e89b496-efae-4b67-96f9-7fc3f56176b7",
+          "type": "scheduled",
+          "message": "Helpdesk Team accepted and scheduled the fix for 10/12/2026, 2:22:00 AM.",
+          "created_at": "2026-10-10T18:22:49.127Z"
+        },
         {
           "id": "24c51988-9756-4625-83be-64017dc5ffd9",
           "type": "notification",
@@ -114,12 +214,12 @@
         }
       ],
       "created_at": "2026-10-10T18:21:43.029Z",
-      "updated_at": "2026-10-10T18:21:43.874Z",
+      "updated_at": "2026-10-10T18:23:14.144Z",
       "email_update": {
         "channel": "email",
         "recipient": "test@test.com",
         "status": "failed",
-        "updated_at": "2026-10-10T18:21:44.240Z",
+        "updated_at": "2026-10-10T18:23:14.733Z",
         "error": "You can only send testing emails to your own email address (laijoeming@gmail.com). To send emails to other recipients, please verify a domain at resend.com/domains, and change the `from` address to an email using this domain."
       }
     },

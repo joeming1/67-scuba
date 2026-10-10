@@ -68,8 +68,8 @@ export function publicTicket(ticket: Ticket): PublicTicket {
 
 export function classify(description: string): Ticket["category"] {
   const text = description.toLowerCase();
-  if (/\b(light|lights|lighting|dark|dim|brightness)\b/.test(text)) return "lighting";
-  if (/\b(ac|air.?con\w*|temperature|hot|warm|cooling)\b/.test(text)) return "air_conditioning";
+  if (/\b(light|lights|lighting|dark|dim|brightness|lgh|lght|lamp|bulb|fluorescent|flicker)\b/.test(text)) return "lighting";
+  if (/\b(ac|air.?con\w*|temperature|hot|warm|cooling|rattle|leak)\b/.test(text)) return "air_conditioning";
   if (/\b(portal|login|log in|password|student account)\b/.test(text)) return "student_portal";
   return "other";
 }
