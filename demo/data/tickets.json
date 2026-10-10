@@ -1,6 +1,128 @@
 {
-  "next_number": 2,
+  "next_number": 4,
   "tickets": [
+    {
+      "id": "FX-0003",
+      "source": "student_report",
+      "summary": "fix lighting",
+      "description": "fix lighting",
+      "category": "lighting",
+      "priority": "medium",
+      "location": "room 69",
+      "student_email": "laijoeming@gmail.com",
+      "status": "assigned",
+      "assignment": {
+        "department_id": "facilities_electrical",
+        "department_name": "Facilities - Electrical",
+        "technician_id": "tech_04",
+        "technician_name": "Amir Hassan",
+        "response": "pending"
+      },
+      "declined_technician_ids": [],
+      "scheduled_at": null,
+      "notification": {
+        "channel": "email",
+        "recipient": "laijoeming@gmail.com",
+        "status": "sent",
+        "updated_at": "2026-10-10T18:22:02.775Z",
+        "provider_id": "01a1270c-f606-744f-bb78-8ca7f0e2e719"
+      },
+      "technician_action_token": "QGvmd-qWRqSpXT5lb6keVrJbwC6XdzTDqEPfIDEbAS8",
+      "student_tracking_token": "1kzkGj-kGGX9OnysOLZqByEe2iQy0Cfm",
+      "completion_verification": null,
+      "sensor_id": null,
+      "verification": null,
+      "timeline": [
+        {
+          "id": "d1945433-b2e7-4e31-aabd-e340312b165c",
+          "type": "notification",
+          "message": "Email assignment with technician response links sent to laijoeming@gmail.com.",
+          "created_at": "2026-10-10T18:22:03.365Z"
+        },
+        {
+          "id": "bacfff27-e91f-477b-bc0f-a6456e46255b",
+          "type": "assigned",
+          "message": "Assigned to Amir Hassan in Facilities - Electrical; awaiting response.",
+          "created_at": "2026-10-10T18:22:02.774Z"
+        },
+        {
+          "id": "3ce4176f-8a2e-4bd7-95a5-117dfe362a03",
+          "type": "created",
+          "message": "Student report received and categorized as lighting.",
+          "created_at": "2026-10-10T18:22:02.774Z"
+        }
+      ],
+      "created_at": "2026-10-10T18:22:02.773Z",
+      "updated_at": "2026-10-10T18:22:03.365Z",
+      "email_update": {
+        "channel": "email",
+        "recipient": "laijoeming@gmail.com",
+        "status": "sent",
+        "updated_at": "2026-10-10T18:22:03.859Z",
+        "provider_id": "01a1270c-f7c2-706e-8437-bfc4070e2ddd"
+      }
+    },
+    {
+      "id": "FX-0002",
+      "source": "student_report",
+      "summary": "test",
+      "description": "test",
+      "category": "other",
+      "priority": "medium",
+      "location": "test",
+      "student_email": "test@test.com",
+      "status": "assigned",
+      "assignment": {
+        "department_id": "helpdesk_triage",
+        "department_name": "Helpdesk Triage",
+        "technician_id": "tech_00",
+        "technician_name": "Helpdesk Team",
+        "response": "pending"
+      },
+      "declined_technician_ids": [],
+      "scheduled_at": null,
+      "notification": {
+        "channel": "email",
+        "recipient": "laijoeming@gmail.com",
+        "status": "sent",
+        "updated_at": "2026-10-10T18:21:43.031Z",
+        "provider_id": "01a1270c-a9de-7a58-a44f-a13f45963a13"
+      },
+      "technician_action_token": "ucTL7ZcrDztUGgFKkEx9UrEHsUrqiTr7b7Cxq21LpvM",
+      "student_tracking_token": "gSn_oUjDFiOHn5KPK9ypgHEH8yYiS9u5",
+      "completion_verification": null,
+      "sensor_id": null,
+      "verification": null,
+      "timeline": [
+        {
+          "id": "24c51988-9756-4625-83be-64017dc5ffd9",
+          "type": "notification",
+          "message": "Email assignment with technician response links sent to laijoeming@gmail.com.",
+          "created_at": "2026-10-10T18:21:43.874Z"
+        },
+        {
+          "id": "43552662-e6d6-4dc4-93da-b7005aa8ea12",
+          "type": "assigned",
+          "message": "Assigned to Helpdesk Team in Helpdesk Triage; awaiting response.",
+          "created_at": "2026-10-10T18:21:43.031Z"
+        },
+        {
+          "id": "50b0bcbe-0247-41a3-8e3a-6a55d70bd734",
+          "type": "created",
+          "message": "Student report received and categorized as other.",
+          "created_at": "2026-10-10T18:21:43.031Z"
+        }
+      ],
+      "created_at": "2026-10-10T18:21:43.029Z",
+      "updated_at": "2026-10-10T18:21:43.874Z",
+      "email_update": {
+        "channel": "email",
+        "recipient": "test@test.com",
+        "status": "failed",
+        "updated_at": "2026-10-10T18:21:44.240Z",
+        "error": "You can only send testing emails to your own email address (laijoeming@gmail.com). To send emails to other recipients, please verify a domain at resend.com/domains, and change the `from` address to an email using this domain."
+      }
+    },
     {
       "id": "FX-0001",
       "source": "student_report",
